@@ -123,3 +123,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# datasets
+fluent_speech_commands_dataset/
+RAVDESS_dataset/
+
+# models
+models/
