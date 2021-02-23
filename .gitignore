@@ -128,5 +128,7 @@ dmypy.json
 fluent_speech_commands_dataset/
 RAVDESS_dataset/
 
-# models
+# models and other local stuff
 models/
+plots/
+.vscode/
