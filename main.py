@@ -21,7 +21,7 @@ parser.add_argument('-r', '--repeats', type = int, help='repeats', default = 2)
 parser.add_argument('-lr', '--learning_rate', type = float, help = 'learning rate', default = 0.001)
 parser.add_argument('-e', '--epochs', type = int, help = 'epochs', default = 100)
 parser.add_argument('-w', '--workers', type = int, help='workers',default = 0)
-parser.add_argument('-p', '--pathdataset', type = str, help='pathdataset', default = './RAVDESS_dataset')
+parser.add_argument('-p', '--pathdataset', type = str, help='path of the dataset', default = './RAVDESS_dataset')
 parser.add_argument('--batch_size', type = int, help='batch_size',default = 100)
 parser.add_argument('--n_classes', type = int, help='number of output classes',default = 8)
 parser.add_argument('--netpath', type = str, help='path of partially trained network', default = None)
@@ -42,13 +42,13 @@ netpath=arg.netpath
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print('Using device %s' % device)
 
-train_data = RAVDESS_DATA( path_dataset + '/train_data.csv', max_len = 128000)
+train_data = RAVDESS_DATA(path_dataset + '/train_data.csv', device=device, max_len = 128000)
 params = {'batch_size': batch_size,
           'shuffle': True,
           'num_workers': numworkers}
 train_set_generator=data.DataLoader(train_data,**params)
 
-test_data = RAVDESS_DATA(path_dataset + '/test_data.csv',max_len = 128000)
+test_data = RAVDESS_DATA(path_dataset + '/test_data.csv', device=device, max_len = 128000)
 params = {'batch_size': batch_size,
           'shuffle': False,
           'num_workers': numworkers}
@@ -65,6 +65,9 @@ criterion = torch.nn.CrossEntropyLoss()
 
 best_accuracy = 0
 
+train_gen_len = len(train_set_generator)
+
+
 for e in range(epochs):
     for i, d in enumerate(train_set_generator):
         model.train()
@@ -76,7 +79,7 @@ for e in range(epochs):
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
-        if i%20 == 0:            
+        if i % train_gen_len == train_gen_len - 1:            
             model.eval()
             correct = []
             for j,eval_data in enumerate(test_set_generator):
@@ -89,7 +92,7 @@ for e in range(epochs):
                 if j > 10:
                     break
             acc = (np.mean(np.concatenate(correct)))
-            iter_acc = 'iteration %d epoch %d--> %f (%f)'%(i, e, acc, best_accuracy)  #accuracy
+            iter_acc = 'iteration %d epoch %d--> %f (%f)'%(i, e + 1, acc, best_accuracy)  #accuracy
             print(iter_acc)   
             
        

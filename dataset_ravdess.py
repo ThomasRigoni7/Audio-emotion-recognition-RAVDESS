@@ -7,32 +7,25 @@ import pandas as pd
 
 
 class RAVDESS_DATA(data.Dataset):
-    def __init__(self, csv_path, max_len=192000):
+    def __init__(self, csv_path, device, change_dir = "/mels/"):
         super(RAVDESS_DATA, self).__init__()
-        self.max_len=max_len
         data = pd.read_csv(csv_path)
-        self.files = data.values.tolist()
+        filenames = data.values.tolist()
+        self.files = []
+        for file, label in filenames:
+            if change_dir is not None
+                file = file.replace("/wav/", change_dir)
+            file = file + ".npy"
+            with open(file, 'rb') as f:
+                numpy_data = np.load(f)
+                self.files.append((torch.from_numpy(numpy_data).to(device) ,int(label) - 1))
 
     def __len__(self):
         return len(self.files)
 
     def __getitem__(self, index):
-        filepath, label = self.files[index]
-        try:
-            #Load librosa array, pad it, obtain mel and return couple X, y
-            waveform, sample_rate = librosa.load(filepath, res_type='kaiser_fast')
-            waveform = waveform[:self.max_len]
-            if len(waveform) < self.max_len: 
-                ff = np.pad(waveform, [(0, self.max_len - waveform.shape[0]),], mode='constant')
-                waveform=ff
-            mfcc = librosa.feature.mfcc(y=waveform, sr=sample_rate, n_mfcc=40)
-            label = int(label) - 1
-            t_mfcc = torch.from_numpy(mfcc)
-            return t_mfcc, label
-        # If the file is not valid, skip it
-        except ValueError:
-            raise RuntimeError("File {} is not valid.".format(filepath))
-
+        X, y = self.files[index]
+        return X, y
 
 if __name__ == "__main__":
     mydata = RAVDESS_DATA('RAVDESS_dataset/train_data.csv', 192000)
