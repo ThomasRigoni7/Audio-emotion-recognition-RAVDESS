@@ -17,7 +17,7 @@ import librosa
 f_files=[]
 fcut_files=[]
 
-for i, file in enumerate(glob.glob('fluent_speech_commands_dataset/wavs/speakers/**/*.wav')):
+for i, file in enumerate(glob.glob('RAVDESS_dataset/wav/**/**/*.wav')):
         
         print(i,end='\r')
         f,sr = sf.read(file) 
@@ -27,7 +27,7 @@ for i, file in enumerate(glob.glob('fluent_speech_commands_dataset/wavs/speakers
         #plot.show()
         #print(file,i)
         dir_name = os.path.dirname(file)
-        dir_name_cut = dir_name.replace('wavs','wavscut') 
+        dir_name_cut = dir_name.replace('wav','wavcut') 
         
         os.makedirs(dir_name_cut, exist_ok=True)
         filename = os.path.basename(file)
@@ -43,9 +43,9 @@ for i, file in enumerate(glob.glob('fluent_speech_commands_dataset/wavs/speakers
 plot.hist(f_files, bins='auto')  
 plot.xlim(0, 100000)
 plot.title("Histogram full wav files")
-plot.show()       
+plot.savefig("plots/full_wav.png")     
 
 plot.hist(fcut_files, bins='auto')  
 plot.title("Histogram cut wav files")
 plot.xlim(0, 100000)
-plot.show()       
+plot.savefig("plots/cut_wav.png")       
