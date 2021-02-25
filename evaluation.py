@@ -12,11 +12,12 @@ import torch.nn
 from torch.autograd import Variable
 import argparse
 import os
+from tabulate import tabulate
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 #reading params
 parser = argparse.ArgumentParser(description='Desciption')
-parser.add_argument('-m', '--model', type = str, help = "model name", required=True)
+parser.add_argument('-m', '--model', type = str, help = "model path or directory", required=True)
 parser.add_argument('-b', '--blocks', type = int, help = 'blocks', default=5)
 parser.add_argument('-r', '--repeats', type = int, help='repeats', default=2)
 parser.add_argument('-w', '--workers', type = int, help='workers',default=0)
@@ -31,45 +32,68 @@ path_dataset= arg.pathdataset
 batch_size=arg.batch_size
 n_classes=arg.n_classes
 
-test_data = RAVDESS_DATA(path_dataset + 'test_data.csv',max_len = 128000)
-params = {'batch_size': batch_size,'shuffle': False,'num_workers': arg.workers}
-test_set_generator=data.DataLoader(test_data,**params)
+classes = ['neutral','calm','happy','sad','angry','fearful','disgust','surprised']
 
-training_data = RAVDESS_DATA(path_dataset + 'train_data.csv',max_len = 128000)
-training_set_generator=data.DataLoader(training_data,**params)
+def accuracy(model, generator):
+    correct=[]
+    for data in generator:
+        inputs, label = data
+        outputs = model(inputs.float().to(device))
+        _, pred = torch.max(outputs.detach().cpu(), dim=1)
+        correct.append((pred == label).float())
+    acc= (np.mean(np.hstack(correct)))
+    return 100 * acc
+
+def class_accuracy(model, generator):
+    class_correct = list(0. for i in range(n_classes))
+    class_total = list(0. for i in range(n_classes))
+    with torch.no_grad():
+        for data in generator:
+            inputs, labels = data
+            outputs = model(inputs.float().to(device))
+            _, pred = torch.max(outputs.detach().cpu(), 1)
+            c = (pred == labels).squeeze()
+            for i in range(len(labels)):
+                label = labels[i]
+                class_correct[label] += c[i].item()
+                class_total[label] += 1
+    
+    for i in range(n_classes):
+        print('%10s : %2.2f %%' % (classes[i], 100 * class_correct[i] / class_total[i]))
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print('Using device %s' % device)
 
-model = TCN(n_blocks=arg.blocks,n_repeats=arg.repeats,out_chan=n_classes)
+test_data = RAVDESS_DATA(path_dataset + 'test_data.csv', device, random_load=False)
+params = {'batch_size': batch_size,'shuffle': False,'num_workers': arg.workers}
+test_set_generator=data.DataLoader(test_data,**params)
 
-#loading the model 
-model.load_state_dict(torch.load(model_name))
-model.eval()
-model.to(device)
+training_data = RAVDESS_DATA(path_dataset + 'train_data.csv', device, random_load=False)
+training_set_generator=data.DataLoader(training_data,**params)
 
-correct_training=[]
-for i, d in enumerate(training_set_generator):
-    print('Iter %d (%d/%d)'%(i,i*batch_size,len(training_data)),end='\r')
-    feat,label=d
+model = TCN(n_blocks=arg.blocks,n_repeats=arg.repeats,out_chan=n_classes, in_chan=40)
 
-    a_eval = model(feat.float().to(device))
-    _, pred_test = torch.max(a_eval.detach().cpu(),dim=1)
-    correct_training.append((pred_test == label).float())
+models = []
+if os.path.isdir(model_name):
+    for dir, subdir, files in os.walk(model_name):
+        for file in files:
+            path = os.path.join(model_name, file)
+            models.append(path)
+else:
+    models.append(model_name)
 
+training_acc = []
+test_acc = []
+for i, modelpath in enumerate(models):
+    print("evaluating model {} of {}".format(i + 1, len(models)), end="\r")
+    model.load_state_dict(torch.load(modelpath))
+    model.to(device)
+    training_acc.append(accuracy(model, training_set_generator))
+    test_acc.append(accuracy(model, test_set_generator))
 
-acc_training= (np.mean(np.hstack(correct_training)))
-print("The accuracy on the training set is %2.2f %%" %(100 *acc_training))
+print(tabulate(list(zip(*[ test_acc, training_acc, models][::-1])), headers=["Model", "Training", "Test"]))
 
-correct_test = []
-for i, d in enumerate(test_set_generator):
-
-    feat,label=d
-    print('Iter %d (%d/%d)'%(i,i*batch_size,len(test_data)),end='\r')
-    z_eval = model(feat.float().to(device))
-    _, pred_test = torch.max(z_eval.detach().cpu(),dim=1)
-    correct_test.append((pred_test == label).float())
-
-
-acc_test= (np.mean(np.hstack(correct_test)))  
-print("The accuracy on test set is %2.2f %%" %(100 * acc_test))
+if len(models) == 1:
+    #print detailed statistics about the model
+    print("Test performance:")
+    class_accuracy(model, test_set_generator)
