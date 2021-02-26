@@ -5,10 +5,10 @@ import librosa
 import numpy as np
 import pandas as pd
 import random
-
+from pathlib import Path
 
 class RAVDESS_DATA(data.Dataset):
-    def __init__(self, csv_path, device, change_dir = "/mels/", chunk_len = 153, random_load = True):
+    def __init__(self, csv_path, device, data_dir = "./RAVDESS_dataset/mels/", chunk_len = 153, random_load = True):
         super(RAVDESS_DATA, self).__init__()
         self.chunk_len = chunk_len
         self.random_load = random_load
@@ -16,12 +16,11 @@ class RAVDESS_DATA(data.Dataset):
         filenames = data.values.tolist()
         self.files = []
         for file, label in filenames:
-            if change_dir is not None:
-                file = file.replace("/wav/", change_dir)
-            file = file + ".npy"
-            with open(file, 'rb') as f:
-                numpy_data = np.load(f)
-                self.files.append((torch.from_numpy(numpy_data).to(device) ,int(label) - 1))
+            filepath = Path(file)
+            if data_dir is not None:
+                filepath = Path(data_dir) / filepath
+            with open(filepath.as_posix(), 'rb') as f:
+                self.files.append((torch.load(f).to(device), int(label) - 1))
 
     def __len__(self):
         return len(self.files)
@@ -35,7 +34,7 @@ class RAVDESS_DATA(data.Dataset):
         return X, y
 
 if __name__ == "__main__":
-    mydata = RAVDESS_DATA('RAVDESS_dataset/train_data.csv', 192000)
+    mydata = RAVDESS_DATA('./RAVDESS_dataset/train_data.csv', device = torch.device("cpu"))
     print(mydata)
     print(mydata.__len__())
 
