@@ -23,14 +23,22 @@ parser.add_argument('-r', '--repeats', type = int, help='repeats', default=2)
 parser.add_argument('-w', '--workers', type = int, help='workers',default=0)
 parser.add_argument('-p', '--pathdataset', type = str, help='pathdataset', default = './RAVDESS_dataset/')
 parser.add_argument('--batch_size', type = int, help='',default = 50)
-parser.add_argument('--n_classes', type = int, help='number of output classes',default = 8)
+parser.add_argument('-in','--in_classes', type = int, help='number of output classes', default = 40)
+parser.add_argument('-out','--out_classes', type = int, help='number of output classes', default = 8)
+parser.add_argument('-t', '--type', type = str, help='type of the input files: mfcc/mfcc128/mel/mel128/', default="mel")
 
 #storing params 
 arg = parser.parse_args()
 model_name = arg.model
 path_dataset= arg.pathdataset
 batch_size=arg.batch_size
-n_classes=arg.n_classes
+in_classes=arg.in_classes
+out_classes=arg.out_classes
+inputfiles_type=arg.type
+
+directories = {"mfcc":"mfcc/", "mfcc128":"mfcc128/","mel":"mels/", "mel128":"mels128/"}
+
+files_directory=directories[inputfiles_type]
 
 classes = ['neutral','calm','happy','sad','angry','fearful','disgust','surprised']
 
@@ -45,8 +53,8 @@ def accuracy(model, generator):
     return 100 * acc
 
 def class_accuracy(model, generator):
-    class_correct = list(0. for i in range(n_classes))
-    class_total = list(0. for i in range(n_classes))
+    class_correct = list(0. for i in range(out_classes))
+    class_total = list(0. for i in range(out_classes))
     with torch.no_grad():
         for data in generator:
             inputs, labels = data
@@ -58,20 +66,20 @@ def class_accuracy(model, generator):
                 class_correct[label] += c[i].item()
                 class_total[label] += 1
     
-    for i in range(n_classes):
+    for i in range(out_classes):
         print('%10s : %2.2f %%' % (classes[i], 100 * class_correct[i] / class_total[i]))
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print('Using device %s' % device)
 
-test_data = RAVDESS_DATA(path_dataset + 'test_data.csv', device, random_load=False)
+test_data = RAVDESS_DATA(path_dataset + 'test_data.csv', device, data_dir=path_dataset + files_directory, random_load=False)
 params = {'batch_size': batch_size,'shuffle': False,'num_workers': arg.workers}
 test_set_generator=data.DataLoader(test_data,**params)
 
-training_data = RAVDESS_DATA(path_dataset + 'train_data.csv', device, random_load=False)
+training_data = RAVDESS_DATA(path_dataset + 'train_data.csv', device, data_dir=path_dataset + files_directory, random_load=False)
 training_set_generator=data.DataLoader(training_data,**params)
 
-model = TCN(n_blocks=arg.blocks,n_repeats=arg.repeats,out_chan=n_classes, in_chan=40)
+model = TCN(n_blocks=arg.blocks,n_repeats=arg.repeats,out_chan=out_classes, in_chan=in_classes)
 
 models = []
 if os.path.isdir(model_name):
@@ -85,6 +93,7 @@ else:
 training_acc = []
 test_acc = []
 for i, modelpath in enumerate(models):
+    
     print("evaluating model {} of {}".format(i + 1, len(models)), end="\r")
     model.load_state_dict(torch.load(modelpath))
     model.to(device)
