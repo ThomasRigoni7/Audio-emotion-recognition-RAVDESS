@@ -132,3 +132,6 @@ RAVDESS_dataset/
 models/
 plots/
 .vscode/
+test.ipynb
+TODO
+wandb/
