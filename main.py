@@ -15,6 +15,17 @@ import argparse
 import os
 import wandb
 
+#bool parsing function
+def str2bool(v):
+    if isinstance(v, bool):
+       return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 #reading params
 parser = argparse.ArgumentParser(description='Desciption')
 parser.add_argument('-m', '--model', type = str, help = "model name", default='./models/TCN/best_model.pkl')
@@ -29,6 +40,9 @@ parser.add_argument('-in','--in_classes', type = int, help='number of output cla
 parser.add_argument('-out','--out_classes', type = int, help='number of output classes', default = 8)
 parser.add_argument('--netpath', type = str, help='path of partially trained network', default = None)
 parser.add_argument('-t', '--type', type = str, help='type of the input files: mfcc/mfcc128/mel/mel128/', default="mel")
+parser.add_argument("--random_load", type=str2bool, nargs='?', help="Load the training data with random init", const=True, default=False)
+
+
 
 arg = parser.parse_args()
 path_dataset = arg.pathdataset
@@ -43,6 +57,7 @@ in_classes = arg.in_classes
 out_classes=arg.out_classes
 netpath=arg.netpath
 inputfiles_type=arg.type
+random_load = arg.random_load
 
 wandb.init(config=arg)
 
@@ -65,7 +80,7 @@ def accuracy(model, generator, device):
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print('Using device %s' % device)
 
-train_data = RAVDESS_DATA(path_dataset + 'train_data.csv', device=device, data_dir=path_dataset + files_directory, random_load=False)
+train_data = RAVDESS_DATA(path_dataset + 'train_data.csv', device=device, data_dir=path_dataset + files_directory, random_load=random_load)
 params = {'batch_size': batch_size,
           'shuffle': True,
           'num_workers': numworkers}
@@ -116,5 +131,6 @@ for e in range(epochs):
                 best_accuracy = acc_test
                 best_epoch = e
                 best_model = copy.deepcopy(model)
-                torch.save(model.state_dict(), modelname)
+                torch.save({"args":arg, "model":model.state_dict()}, modelname)
 
+print("Best accuracy reached at epoch %d with %2.2f%%" % (best_epoch, best_accuracy))
