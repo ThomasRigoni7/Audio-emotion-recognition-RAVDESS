@@ -5,7 +5,7 @@ import soundfile as sf
 import numpy as np
 from scipy import signal
 import librosa
-from models import TCN
+from TCN import TCN
 from dataset_ravdess import RAVDESS_DATA
 import torch.optim as optim
 import torch.nn
@@ -90,7 +90,7 @@ else:
 training_acc = []
 test_acc = []
 for i, modelpath in enumerate(models):
-    print("evaluating model {} of {}".format(i + 1, len(models)))
+    print("evaluating model {} of {}".format(i + 1, len(models)), end="\r")
     loaded = torch.load(modelpath)
     if "args" in loaded:
         modelsettings = loaded["args"]
@@ -110,11 +110,11 @@ for i, modelpath in enumerate(models):
     training_data = RAVDESS_DATA(modelsettings.pathdataset + 'train_data.csv', device,
                                  data_dir=modelsettings.pathdataset + files_directory, random_load=False)
     training_set_generator = data.DataLoader(training_data, **params)
-
     model = TCN(n_blocks=modelsettings.blocks, n_repeats=modelsettings.repeats,
                 out_chan=modelsettings.out_classes, in_chan=modelsettings.in_classes)
     model.load_state_dict(modeldict)
     model.to(device)
+    model.eval()
     training_acc.append(accuracy(model, training_set_generator))
     test_acc.append(accuracy(model, test_set_generator))
 
