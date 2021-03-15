@@ -123,8 +123,9 @@ class TCN(nn.Module):
     def forward(self, mixture_w):
         output = self.dropout(self.bottleneck(mixture_w))
         for i in range(len(self.TCN)):
-            residual = self.dropout(self.TCN[i](output))
+            residual = self.TCN[i](output)
             output = output + residual
+        output = self.dropout(output)
 
         ###provare max pool2D su ouput seguito de reshape .view(-1,1)
 

@@ -16,7 +16,7 @@ from tabulate import tabulate
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 # reading params
-parser = argparse.ArgumentParser(description='''Evaluate the training and test performance of a model or a directory containing models.
+parser = argparse.ArgumentParser(description='''Evaluate the validation and test performance of a model or a directory containing models.
     If the model file has its own configuration it will override the one given as input.''')
 parser.add_argument('-m', '--model', type=str,
                     help="model path or directory", required=True)
@@ -37,7 +37,7 @@ settings = parser.parse_args()
 model_name = settings.model
 
 directories = {"mfcc": "mfcc/", "mfcc128": "mfcc128/",
-               "mel": "mels/", "mel128": "mels128/"}
+               "mel": "mels/", "mel128": "mels128/", "mel_noise": "mels_noise2/"}
 
 classes = ['neutral', 'calm', 'happy', 'sad',
            'angry', 'fearful', 'disgust', 'surprised']
@@ -87,7 +87,7 @@ else:
     models.append(model_name)
 
 
-training_acc = []
+validation_acc = []
 test_acc = []
 for i, modelpath in enumerate(models):
     print("evaluating model {} of {}".format(i + 1, len(models)), end="\r")
@@ -107,19 +107,19 @@ for i, modelpath in enumerate(models):
               'shuffle': False, 'num_workers': modelsettings.workers}
     test_set_generator = data.DataLoader(test_data, **params)
 
-    training_data = RAVDESS_DATA(modelsettings.pathdataset + 'train_data.csv', device,
+    validation_data = RAVDESS_DATA(modelsettings.pathdataset + 'valid_data.csv', device,
                                  data_dir=modelsettings.pathdataset + files_directory, random_load=False)
-    training_set_generator = data.DataLoader(training_data, **params)
+    validation_set_generator = data.DataLoader(validation_data, **params)
     model = TCN(n_blocks=modelsettings.blocks, n_repeats=modelsettings.repeats,
                 out_chan=modelsettings.out_classes, in_chan=modelsettings.in_classes)
     model.load_state_dict(modeldict)
     model.to(device)
     model.eval()
-    training_acc.append(accuracy(model, training_set_generator))
+    validation_acc.append(accuracy(model, validation_set_generator))
     test_acc.append(accuracy(model, test_set_generator))
 
-print(tabulate(list(zip(*[test_acc, training_acc, models][::-1])),
-               headers=["Model", "Training", "Test"]))
+print(tabulate(list(zip(*[test_acc, validation_acc, models][::-1])),
+               headers=["Model", "Validation", "Test"]))
 
 if len(models) == 1:
     # print detailed statistics about the model

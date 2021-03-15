@@ -54,13 +54,13 @@ parser.add_argument('-out', '--out_classes', type=int,
 parser.add_argument('--step_size', type=int,
                     help='number of epochs between each scheduler step', default=10)
 parser.add_argument('-g', '--gamma', type=float,
-                    help='multiplicative factor of the scheduler step (how much does the learning rate shrink)', default=0.8)
+                    help='multiplicative factor of the scheduler step (how much does the learning rate shrink)', default=0.9)
 parser.add_argument('--dropout_prob', type=float,
                     help='probability in the dropout layers', default=0.2)
 parser.add_argument('--netpath', type=str,
                     help='path of partially trained network', default=None)
 parser.add_argument('-t', '--type', type=str,
-                    help='type of the input files: mfcc/mfcc128/mel/mel128/', default="mel")
+                    help='type of the input files: mfcc/mfcc128/mel/mel128/mel_noise', default="mel")
 parser.add_argument("--random_load", type=str2bool, nargs='?',
                     help="Load the training data with random init", const=True, default=False)
 parser.add_argument("--wandb", type=str2bool, nargs='?',
@@ -87,7 +87,8 @@ sc_gamma = arg.gamma
 dropout_prob = arg.dropout_prob
 
 if Path(modelname).is_file():
-    ans = input("The specified model file %s already exists, do you really want to overwrite it (y/n)? " % modelname)
+    ans = input(
+        "The specified model file %s already exists, do you really want to overwrite it (y/n)? " % modelname)
     if not str2bool(ans):
         quit()
 
@@ -98,7 +99,7 @@ else:
     wandb = None
 
 directories = {"mfcc": "mfcc/", "mfcc128": "mfcc128/",
-               "mel": "mels/", "mel128": "mels128/"}
+               "mel": "mels/", "mel128": "mels128/", "mel_noise": "mels_noise2/"}
 
 files_directory = directories[inputfiles_type]
 
@@ -126,12 +127,17 @@ params = {'batch_size': batch_size,
           'num_workers': numworkers}
 train_set_generator = data.DataLoader(train_data, **params)
 
-test_data = RAVDESS_DATA(path_dataset + 'test_data.csv', device=device,
-                         data_dir=path_dataset + files_directory, random_load=False)
+valid_data = RAVDESS_DATA(path_dataset + 'valid_data.csv', device=device,
+                          data_dir=path_dataset + files_directory, random_load=False)
 params = {'batch_size': batch_size,
           'shuffle': False,
           'num_workers': numworkers}
+valid_set_generator = data.DataLoader(valid_data, **params)
+
+test_data = RAVDESS_DATA(path_dataset + 'test_data.csv', device=device,
+                         data_dir=path_dataset + files_directory, random_load=False)
 test_set_generator = data.DataLoader(test_data, **params)
+
 
 model = TCN(n_blocks=tcnBlocks, n_repeats=tcnRepeats,
             in_chan=in_classes, out_chan=out_classes, dropout_prob=dropout_prob)
@@ -140,7 +146,8 @@ if netpath is not None:
 model = model.to(device)
 
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=sc_step_size, gamma=sc_gamma)
+scheduler = torch.optim.lr_scheduler.StepLR(
+    optimizer, step_size=sc_step_size, gamma=sc_gamma)
 
 criterion = torch.nn.CrossEntropyLoss()
 
@@ -151,12 +158,14 @@ if wandb is not None:
     wandb.watch(model)
 
 for e in range(epochs):
+    sum_loss = 0
     for i, d in enumerate(train_set_generator):
         model.train()
         f, l = d
         f = torch.squeeze(f, dim=1)
         y = model(f.float().to(device))
         loss = criterion(y, l.to(device))
+        sum_loss += loss
 
         print("Iteration %d in epoch %d--> loss = %f" %
               (i, e + 1, loss.item()), end='\r')
@@ -167,24 +176,37 @@ for e in range(epochs):
             scheduler.step()
             model.eval()
             acc_train = accuracy(model, train_set_generator, device)
-            acc_test = accuracy(model, test_set_generator, device)
+            acc_valid = accuracy(model, valid_set_generator, device)
             # accuracy
             iter_acc = 'iteration %d epoch %d--> %f (%f)' % (
-                i, e + 1, acc_test, best_accuracy)
+                i, e + 1, acc_valid, best_accuracy)
             print(iter_acc)
             if wandb is not None:
-                wandb.log({"loss": loss, "training accuracy": acc_train,
-                           "testing accuracy": acc_test})
+                wandb.log({"loss": sum_loss/train_gen_len, "training accuracy": acc_train,
+                           "validation accuracy": acc_valid})
+            sum_loss = 0
 
-            if acc_test > best_accuracy:
+            if acc_valid > best_accuracy:
                 improved_accuracy = 'Current accuracy = %f (%f), updating best model' % (
-                    acc_test, best_accuracy)
+                    acc_valid, best_accuracy)
                 print(improved_accuracy)
-                best_accuracy = acc_test
+                best_accuracy = acc_valid
                 best_epoch = e
                 best_model = copy.deepcopy(model)
                 torch.save(
                     {"args": arg, "model": model.state_dict()}, modelname)
 
-print("Best accuracy reached at epoch %d with %2.2f%%" %
+model.eval()
+test_acc_best = accuracy(best_model, test_set_generator, device)
+test_acc_last = accuracy(model, test_set_generator, device)
+
+wandb.log({"best accuracy": best_accuracy})
+
+print("Best accuracy on validation set reached at epoch %d with %2.2f%%" %
       (best_epoch + 1, best_accuracy))
+if test_acc_best > test_acc_last:
+    print("Best accuracy on test set is on the BEST model with %2.2f%%, (vs %2.2f%%)" % (test_acc_best, test_acc_last))
+else:
+    print("Best accuracy on test set is on the LAST model with %2.2f%%, (vs %2.2f%%)" % (test_acc_last, test_acc_best))
+    torch.save({"args": arg, "model": model.state_dict()},
+               Path(modelname).with_suffix(".pkll"))
