@@ -60,11 +60,13 @@ parser.add_argument('--dropout_prob', type=float,
 parser.add_argument('--netpath', type=str,
                     help='path of partially trained network', default=None)
 parser.add_argument('-t', '--type', type=str,
-                    help='type of the input files: mfcc/mfcc128/mel/mel128/mel_noise', default="mel")
+                    help='type of the input files: mfcc/mfcc128/mel/mel128/mel_noise/augmented', default="mel")
 parser.add_argument("--random_load", type=str2bool, nargs='?',
                     help="Load the training data with random init", const=True, default=False)
 parser.add_argument("--wandb", type=str2bool, nargs='?',
                     help="Log the run with wandb", const=True, default=True)
+parser.add_argument('-csv', '--csv_location', type=str,
+                    help='directory where to find the csv files test_data.csv, train_data.csv, valid_data.csv', default="./RAVDESS_dataset/csv/divided")
 
 
 arg = parser.parse_args()
@@ -85,6 +87,7 @@ use_wandb = arg.wandb
 sc_step_size = arg.step_size
 sc_gamma = arg.gamma
 dropout_prob = arg.dropout_prob
+csv_location = arg.csv_location
 
 if Path(modelname).is_file():
     ans = input(
@@ -99,7 +102,7 @@ else:
     wandb = None
 
 directories = {"mfcc": "mfcc/", "mfcc128": "mfcc128/",
-               "mel": "mels/", "mel128": "mels128/", "mel_noise": "mels_noise2/"}
+               "mel": "mels/", "mel128": "mels128/", "mel_noise": "mels_noise2/", "augmented": "augmented/", "nps": "noise_pitch_speed/", "pitch":"pitch/"}
 
 files_directory = directories[inputfiles_type]
 
@@ -120,21 +123,21 @@ def accuracy(model, generator, device):
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print('Using device %s' % device)
 
-train_data = RAVDESS_DATA(path_dataset + 'train_data.csv', device=device,
+train_data = RAVDESS_DATA(csv_location + 'train_data.csv', device=device,
                           data_dir=path_dataset + files_directory, random_load=random_load)
 params = {'batch_size': batch_size,
           'shuffle': True,
           'num_workers': numworkers}
 train_set_generator = data.DataLoader(train_data, **params)
 
-valid_data = RAVDESS_DATA(path_dataset + 'valid_data.csv', device=device,
+valid_data = RAVDESS_DATA(csv_location + 'valid_data.csv', device=device,
                           data_dir=path_dataset + files_directory, random_load=False)
 params = {'batch_size': batch_size,
           'shuffle': False,
           'num_workers': numworkers}
 valid_set_generator = data.DataLoader(valid_data, **params)
 
-test_data = RAVDESS_DATA(path_dataset + 'test_data.csv', device=device,
+test_data = RAVDESS_DATA(csv_location + 'test_data.csv', device=device,
                          data_dir=path_dataset + files_directory, random_load=False)
 test_set_generator = data.DataLoader(test_data, **params)
 
@@ -199,14 +202,17 @@ for e in range(epochs):
 model.eval()
 test_acc_best = accuracy(best_model, test_set_generator, device)
 test_acc_last = accuracy(model, test_set_generator, device)
-
-wandb.log({"best accuracy": best_accuracy})
+if wandb is not None:
+    wandb.log({"best accuracy": best_accuracy})
 
 print("Best accuracy on validation set reached at epoch %d with %2.2f%%" %
       (best_epoch + 1, best_accuracy))
 if test_acc_best > test_acc_last:
-    print("Best accuracy on test set is on the BEST model with %2.2f%%, (vs %2.2f%%)" % (test_acc_best, test_acc_last))
+    print("Best accuracy on test set is on the BEST model with %2.2f%%, (vs %2.2f%%)" % (
+        test_acc_best, test_acc_last))
 else:
-    print("Best accuracy on test set is on the LAST model with %2.2f%%, (vs %2.2f%%)" % (test_acc_last, test_acc_best))
+    print("Best accuracy on test set is on the LAST model with %2.2f%%, (vs %2.2f%%)" % (
+        test_acc_last, test_acc_best))
+    modelpath = Path(modelname)
     torch.save({"args": arg, "model": model.state_dict()},
-               Path(modelname).with_suffix(".pkll"))
+               modelpath.with_name(modelpath.stem + "_LAST.pkl"))

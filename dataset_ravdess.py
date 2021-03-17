@@ -30,7 +30,7 @@ class RAVDESS_DATA(data.Dataset):
                 raise RuntimeError(
                     "Data file not found in '{}', did you download the dataset and generate the files with genfiles.py?".format(filepath)) from oserr
             with f:
-                self.files.append((torch.load(f).to(device), int(label) - 1))
+                self.files.append((torch.load(f), int(label) - 1))
 
     def __len__(self):
         return len(self.files)
