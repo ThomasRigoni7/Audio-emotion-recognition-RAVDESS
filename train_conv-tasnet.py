@@ -5,11 +5,10 @@ import soundfile as sf
 import numpy as np
 from scipy import signal
 import librosa
-from TCN import TCN
+from conv_tasnet import ConvTasNet
 from dataset_ravdess import RAVDESS_DATA
 import torch.optim as optim
 import torch.nn
-from torch.autograd import Variable
 import matplotlib.pyplot as plt
 import argparse
 import os
@@ -31,32 +30,33 @@ def str2bool(v):
 
 # reading params
 parser = argparse.ArgumentParser(
-    description='Train a TCN model with the parameters specified, the input files must have been previously generated with genfiles.py.')
+    description='Train a Conv-TasNet model with the parameters specified, the input files must have been previously generated with genfiles.py.')
+# Network architecture
+parser.add_argument('--N', default=256, type=int,
+                    help='Number of filters in autoencoder')
+parser.add_argument('--L', default=20, type=int,
+                    help='Length of the filters in samples (40=5ms at 8kHZ)')
+parser.add_argument('--B', default=256, type=int,
+                    help='Number of channels in bottleneck 1 × 1-conv block')
+parser.add_argument('--H', default=512, type=int,
+                    help='Number of channels in convolutional blocks')
+parser.add_argument('--P', default=3, type=int,
+                    help='Kernel size in convolutional blocks')
+parser.add_argument('--X', default=8, type=int,
+                    help='Number of convolutional blocks in each repeat')
+parser.add_argument('--R', default=4, type=int,
+                    help='Number of repeats')
+parser.add_argument('--C', default=8, type=int,
+                    help='Number of out classes')
+parser.add_argument('--norm_type', default='gLN', type=str,
+                    choices=['gLN', 'cLN', 'BN'], help='Layer norm type')
+parser.add_argument('--causal', type=int, default=0,
+                    help='Causal (1) or noncausal(0) training')
+parser.add_argument('--mask_nonlinear', default='relu', type=str,
+                    choices=['relu', 'softmax'], help='non-linear to generate mask')
+#configuration
 parser.add_argument('-m', '--model', type=str,
-                    help="model name", default='./models/TCN/best_model.pkl')
-parser.add_argument('-b', '--blocks', type=int,
-                    help='number of blocks in the TCN', default=5)
-parser.add_argument('-r', '--repeats', type=int,
-                    help='repeats in the TCN', default=2)
-parser.add_argument('-lr', '--learning_rate', type=float,
-                    help='learning rate', default=0.001)
-parser.add_argument('-e', '--epochs', type=int, help='epochs', default=100)
-parser.add_argument('-w', '--workers', type=int,
-                    help='workers on the data load', default=0)
-parser.add_argument('-p', '--pathdataset', type=str,
-                    help='path of the dataset', default='./RAVDESS_dataset/')
-parser.add_argument('--batch_size', type=int,
-                    help='minibatch size', default=100)
-parser.add_argument('-in', '--in_classes', type=int,
-                    help='number of input classes', default=40)
-parser.add_argument('-out', '--out_classes', type=int,
-                    help='number of output classes', default=8)
-parser.add_argument('--step_size', type=int,
-                    help='number of epochs between each scheduler step', default=10)
-parser.add_argument('-g', '--gamma', type=float,
-                    help='multiplicative factor of the scheduler step (how much does the learning rate shrink)', default=0.9)
-parser.add_argument('--dropout_prob', type=float,
-                    help='probability in the dropout layers', default=0.2)
+                    help="model name", default=None)
 parser.add_argument('--netpath', type=str,
                     help='path of partially trained network', default=None)
 parser.add_argument('-t', '--type', type=str,
@@ -66,30 +66,41 @@ parser.add_argument("--random_load", type=str2bool, nargs='?',
 parser.add_argument("--wandb", type=str2bool, nargs='?',
                     help="Log the run with wandb", const=True, default=True)
 parser.add_argument('-csv', '--csv_location', type=str,
-                    help='directory where to find the csv files test_data.csv, train_data.csv, valid_data.csv', default="./RAVDESS_dataset/csv/divided")
+                    help='directory where to find the csv files test_data.csv, train_data.csv, valid_data.csv', default="./RAVDESS_dataset/csv/divided_with_validation/")
+#learning parameters
+parser.add_argument('-lr', '--learning_rate', type=float,
+                    help='learning rate', default=0.001)
+parser.add_argument('-e', '--epochs', type=int, help='epochs', default=40)
+parser.add_argument('-w', '--workers', type=int,
+                    help='workers on the data load', default=0)
+parser.add_argument('-p', '--pathdataset', type=str,
+                    help='path of the dataset', default='./RAVDESS_dataset/')
+parser.add_argument('--batch_size', type=int,
+                    help='minibatch size', default=8)
+parser.add_argument('--step_size', type=int,
+                    help='number of epochs between each scheduler step', default=10)
+parser.add_argument('-g', '--gamma', type=float,
+                    help='multiplicative factor of the scheduler step (how much does the learning rate shrink)', default=0.9)
+
 
 
 arg = parser.parse_args()
 path_dataset = arg.pathdataset
 numworkers = arg.workers
-tcnBlocks = arg.blocks
-tcnRepeats = arg.repeats
 learning_rate = arg.learning_rate
 epochs = arg.epochs
 modelname = arg.model
 batch_size = arg.batch_size
-in_classes = arg.in_classes
-out_classes = arg.out_classes
 netpath = arg.netpath
 inputfiles_type = arg.type
 random_load = arg.random_load
 use_wandb = arg.wandb
 sc_step_size = arg.step_size
 sc_gamma = arg.gamma
-dropout_prob = arg.dropout_prob
 csv_location = arg.csv_location
 
-if Path(modelname).is_file():
+
+if modelname is not None and Path(modelname).is_file():
     ans = input(
         "The specified model file %s already exists, do you really want to overwrite it (y/n)? " % modelname)
     if not str2bool(ans):
@@ -97,14 +108,16 @@ if Path(modelname).is_file():
 
 if use_wandb:
     import wandb
-    wandb.init(config=arg)
+    wandb.init(config=arg, project="conv-tasnet", save_code=True)
+    wandb.save("*.py")
+    if modelname is None:
+        modelname = Path("./models/ConvTasNet/WandB/") / wandb.run.name
 else:
     wandb = None
+    if modelname is None:
+        raise RuntimeError("If wandb is not active you MUST specify a model name!")
 
-directories = {"mfcc": "mfcc/", "mfcc128": "mfcc128/",
-               "mel": "mels/", "mel128": "mels128/", "mel_noise": "mels_noise2/", "augmented": "augmented/", "nps": "noise_pitch_speed/", "pitch":"pitch/"}
-
-files_directory = directories[inputfiles_type]
+files_directory = Path(inputfiles_type) / ""
 
 
 def accuracy(model, generator, device):
@@ -123,27 +136,28 @@ def accuracy(model, generator, device):
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print('Using device %s' % device)
 
-train_data = RAVDESS_DATA(csv_location + 'train_data.csv', device=device,
-                          data_dir=path_dataset + files_directory, random_load=random_load)
+train_data = RAVDESS_DATA(csv_location + 'train_data.csv', 
+                          data_dir=Path(path_dataset) / files_directory, random_load=random_load, chunk_len=300, in_suffix = ".wav")
 params = {'batch_size': batch_size,
           'shuffle': True,
           'num_workers': numworkers}
 train_set_generator = data.DataLoader(train_data, **params)
 
-valid_data = RAVDESS_DATA(csv_location + 'valid_data.csv', device=device,
-                          data_dir=path_dataset + files_directory, random_load=False)
+valid_data = RAVDESS_DATA(csv_location + 'valid_data.csv', 
+                          data_dir=Path(path_dataset) / files_directory, random_load=False, in_suffix = ".wav")
 params = {'batch_size': batch_size,
           'shuffle': False,
           'num_workers': numworkers}
 valid_set_generator = data.DataLoader(valid_data, **params)
 
-test_data = RAVDESS_DATA(csv_location + 'test_data.csv', device=device,
-                         data_dir=path_dataset + files_directory, random_load=False)
+test_data = RAVDESS_DATA(csv_location + 'test_data.csv', 
+                         data_dir=Path(path_dataset) / files_directory, random_load=False, in_suffix = ".wav")
 test_set_generator = data.DataLoader(test_data, **params)
 
+model = ConvTasNet(arg.N, arg.L, arg.B, arg.H, arg.P, arg.X, arg.R,
+                       arg.C, norm_type=arg.norm_type, causal=arg.causal,
+                       mask_nonlinear=arg.mask_nonlinear)
 
-model = TCN(n_blocks=tcnBlocks, n_repeats=tcnRepeats,
-            in_chan=in_classes, out_chan=out_classes, dropout_prob=dropout_prob)
 if netpath is not None:
     model.load_state_dict(torch.load(netpath))
 model = model.to(device)
@@ -166,7 +180,9 @@ for e in range(epochs):
         model.train()
         f, l = d
         f = torch.squeeze(f, dim=1)
+        # print("x shape: ", f.shape)
         y = model(f.float().to(device))
+        # print("y shape: ", y.shape)
         loss = criterion(y, l.to(device))
         sum_loss += loss
 
@@ -178,14 +194,14 @@ for e in range(epochs):
         if i % train_gen_len == train_gen_len - 1:
             scheduler.step()
             model.eval()
-            acc_train = accuracy(model, train_set_generator, device)
+            #acc_train = accuracy(model, train_set_generator, device)
             acc_valid = accuracy(model, valid_set_generator, device)
             # accuracy
             iter_acc = 'iteration %d epoch %d--> %f (%f)' % (
                 i, e + 1, acc_valid, best_accuracy)
             print(iter_acc)
             if wandb is not None:
-                wandb.log({"loss": sum_loss/train_gen_len, "training accuracy": acc_train,
+                wandb.log({"loss": sum_loss/train_gen_len, #"training accuracy": acc_train,
                            "validation accuracy": acc_valid})
             sum_loss = 0
 
