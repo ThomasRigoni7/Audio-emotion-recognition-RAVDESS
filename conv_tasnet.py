@@ -13,7 +13,7 @@ EPS = 1e-8
 
 class ConvTasNet(nn.Module):
     def __init__(self, N, L, B, H, P, X, R, C, norm_type="gLN", causal=False,
-                 mask_nonlinear='relu'):
+                 mask_nonlinear='relu', T=None, dropout_prob = 0.2):
         """
         Args:
             N: Number of filters in autoencoder
@@ -27,18 +27,18 @@ class ConvTasNet(nn.Module):
             norm_type: BN, gLN, cLN
             causal: causal or non-causal
             mask_nonlinear: use which non-linear function to generate mask
+            T: number of input samples
         """
         super(ConvTasNet, self).__init__()
         # Hyper-parameter
-        #K = 2*T//L-1
-        self.N, self.L, self.B, self.H, self.P, self.X, self.R, self.C= N, L, B, H, P, X, R, C
+        self.N, self.L, self.B, self.H, self.P, self.X, self.R, self.C, self.T= N, L, B, H, P, X, R, C, T
         self.norm_type = norm_type
         self.causal = causal
         self.mask_nonlinear = mask_nonlinear
         # Components
         self.encoder = Encoder(L, N)
         self.separator = TemporalConvNet(N, B, H, P, X, R, C, norm_type, causal, mask_nonlinear)
-        self.decoder = Decoder(N, L, C)
+        self.decoder = Decoder(N, L, C, T, dropout_prob)
         # init
         for p in self.parameters():
             if p.dim() > 1:
@@ -123,15 +123,18 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, N, L, C):
+    def __init__(self, N, L, C, T, dropout_prob):
         super(Decoder, self).__init__()
         # Hyper-parameter
-        self.N, self.L, self.C = N, L, C, 
+        K = int(2*T//L-1) if T is not None else None
+        self.N, self.L, self.C, self.K = N, L, C, K
         # Components
         self.basis_signals = nn.Linear(N, L, bias=False)
         #self.fc1 = nn.Linear(L*C, L*C)
-        self.fc1 = nn.Linear(L*C, 5*C)
-        self.fc2 = nn.Linear(5*C, C)
+        if K is not None:
+            self.fc1 = nn.Linear(L*C*K, L*C)    
+        self.fc2 = nn.Linear(L*C, C)
+        self.dropout = nn.Dropout(p=dropout_prob)
 
     def forward(self, mixture_w, est_mask, multiply:bool):
         """
@@ -151,10 +154,15 @@ class Decoder(nn.Module):
         # S = DV
         # boh... probabilmente inutile
         est_source = self.basis_signals(source_w)  # [M, C, K, L]
-        est_mean = est_source.mean(2)
+        est_source = self.dropout(est_source)
+        if self.K is None:
+            est_mean = est_source.mean(2)
+            prediction = est_mean.view(-1, self.C * self.L)
+        else:
+            prediction = est_source.view(-1, self.C * self.L * self.K)
+            prediction = F.relu(self.fc1(prediction))
+            prediction = self.dropout(prediction)
         # print("shape after mean: ", est_mean.shape)
-        prediction = est_mean.view(-1, self.C * self.L)
-        prediction = F.relu(self.fc1(prediction))
         prediction = self.fc2(prediction)
         #est_source = overlap_and_add(est_source, self.L//2) # M x C x T
         #return est_source

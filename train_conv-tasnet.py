@@ -54,11 +54,15 @@ parser.add_argument('--causal', type=int, default=0,
                     help='Causal (1) or noncausal(0) training')
 parser.add_argument('--mask_nonlinear', default='relu', type=str,
                     choices=['relu', 'softmax'], help='non-linear to generate mask')
+parser.add_argument('--dropout_prob', default=0.2, type=float,
+                    help='dropout probability')                    
 #configuration
 parser.add_argument('-m', '--model', type=str,
                     help="model name", default=None)
 parser.add_argument('--netpath', type=str,
                     help='path of partially trained network', default=None)
+parser.add_argument('-sr', "--sample_rate", type=int,
+                    help='sample rate used to load wav files', default=1000)
 parser.add_argument('-t', '--type', type=str,
                     help='type of the input files: mfcc/mfcc128/mel/mel128/mel_noise/augmented', default="mel")
 parser.add_argument("--random_load", type=str2bool, nargs='?',
@@ -112,6 +116,7 @@ if use_wandb:
     wandb.save("*.py")
     if modelname is None:
         modelname = Path("./models/ConvTasNet/WandB/") / wandb.run.name
+        arg.model = modelname
 else:
     wandb = None
     if modelname is None:
@@ -137,26 +142,33 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print('Using device %s' % device)
 
 train_data = RAVDESS_DATA(csv_location + 'train_data.csv', 
-                          data_dir=Path(path_dataset) / files_directory, random_load=random_load, chunk_len=300, in_suffix = ".wav")
+                          data_dir=Path(path_dataset) / files_directory, random_load=random_load, chunk_len=300, in_suffix = ".wav", sr = arg.sample_rate)
 params = {'batch_size': batch_size,
           'shuffle': True,
           'num_workers': numworkers}
 train_set_generator = data.DataLoader(train_data, **params)
 
 valid_data = RAVDESS_DATA(csv_location + 'valid_data.csv', 
-                          data_dir=Path(path_dataset) / files_directory, random_load=False, in_suffix = ".wav")
+                          data_dir=Path(path_dataset) / files_directory, random_load=False, in_suffix = ".wav", sr = arg.sample_rate)
 params = {'batch_size': batch_size,
           'shuffle': False,
           'num_workers': numworkers}
 valid_set_generator = data.DataLoader(valid_data, **params)
 
 test_data = RAVDESS_DATA(csv_location + 'test_data.csv', 
-                         data_dir=Path(path_dataset) / files_directory, random_load=False, in_suffix = ".wav")
+                         data_dir=Path(path_dataset) / files_directory, random_load=False, in_suffix = ".wav", sr = arg.sample_rate)
 test_set_generator = data.DataLoader(test_data, **params)
 
+# 6.25 is the duration of the audio in seconds
+arg.T = 6.25 * arg.sample_rate
 model = ConvTasNet(arg.N, arg.L, arg.B, arg.H, arg.P, arg.X, arg.R,
                        arg.C, norm_type=arg.norm_type, causal=arg.causal,
                        mask_nonlinear=arg.mask_nonlinear)
+'''
+model = ConvTasNet(arg.N, arg.L, arg.B, arg.H, arg.P, arg.X, arg.R,
+                       arg.C, norm_type=arg.norm_type, causal=arg.causal,
+                       mask_nonlinear=arg.mask_nonlinear, T=arg.T)
+'''
 
 if netpath is not None:
     model.load_state_dict(torch.load(netpath))
@@ -191,29 +203,31 @@ for e in range(epochs):
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
-        if i % train_gen_len == train_gen_len - 1:
-            scheduler.step()
-            model.eval()
-            #acc_train = accuracy(model, train_set_generator, device)
-            acc_valid = accuracy(model, valid_set_generator, device)
-            # accuracy
-            iter_acc = 'iteration %d epoch %d--> %f (%f)' % (
-                i, e + 1, acc_valid, best_accuracy)
-            print(iter_acc)
-            if wandb is not None:
-                wandb.log({"loss": sum_loss/train_gen_len, #"training accuracy": acc_train,
-                           "validation accuracy": acc_valid})
-            sum_loss = 0
+    scheduler.step()
+    model.eval()
+    acc_train = accuracy(model, train_set_generator, device)
+    acc_valid = accuracy(model, valid_set_generator, device)
+    # accuracy
+    iter_acc = 'iteration %d epoch %d--> %f (%f)' % (
+        i, e + 1, acc_valid, best_accuracy)
+    print(iter_acc)
+    if wandb is not None:
+        wandb.log({"loss": sum_loss/train_gen_len, "training accuracy": acc_train,
+                    "validation accuracy": acc_valid})
+    sum_loss = 0
 
-            if acc_valid > best_accuracy:
-                improved_accuracy = 'Current accuracy = %f (%f), updating best model' % (
-                    acc_valid, best_accuracy)
-                print(improved_accuracy)
-                best_accuracy = acc_valid
-                best_epoch = e
-                best_model = copy.deepcopy(model)
-                torch.save(
-                    {"args": arg, "model": model.state_dict()}, modelname)
+    if acc_valid > best_accuracy:
+        improved_accuracy = 'Current accuracy = %f (%f), updating best model' % (
+            acc_valid, best_accuracy)
+        print(improved_accuracy)
+        best_accuracy = acc_valid
+        best_epoch = e
+        best_model = copy.deepcopy(model)
+        torch.save(
+            {"args": arg, "model": model.state_dict()}, modelname)
+    # stop if heavy overfitting
+    if acc_train > 99 and acc_valid < 50:
+        break
 
 model.eval()
 test_acc_best = accuracy(best_model, test_set_generator, device)

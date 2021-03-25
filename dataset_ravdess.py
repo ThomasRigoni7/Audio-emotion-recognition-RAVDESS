@@ -36,7 +36,7 @@ class RAVDESS_DATA(data.Dataset):
                 if self.in_suffix == ".pt":
                     x = torch.load(f)
                 elif self.in_suffix == ".wav":
-                    x, sr = librosa.load(f, sr=1000)
+                    x, sr = librosa.load(f, sr=self.sr)
                     # print("#samples, sample rate = ", x.shape[0], sr)
                 else:
                     raise RuntimeError(
@@ -58,7 +58,7 @@ class RAVDESS_DATA(data.Dataset):
         print("---DONE---")
         return files
     
-    def __init__(self, csv_path, device=None, data_dir="./RAVDESS_dataset/mels/", chunk_len=153, random_load=True, in_suffix=".pt", transformations="none"):
+    def __init__(self, csv_path, device=None, data_dir="./RAVDESS_dataset/mels/", chunk_len=153, random_load=True, in_suffix=".pt", transformations="none", sr=22050):
         super(RAVDESS_DATA, self).__init__()
         self.chunk_len = chunk_len
         self.random_load = random_load
@@ -67,6 +67,7 @@ class RAVDESS_DATA(data.Dataset):
         self.device = device
         self.in_suffix = in_suffix
         self.transformations = transformations
+        self.sr = sr
         filenames = self._load_csv(csv_path)
         self.files = self._load_files(filenames)
         
