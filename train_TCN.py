@@ -66,7 +66,7 @@ parser.add_argument("--random_load", type=str2bool, nargs='?',
 parser.add_argument("--wandb", type=str2bool, nargs='?',
                     help="Log the run with wandb", const=True, default=True)
 parser.add_argument('-csv', '--csv_location', type=str,
-                    help='directory where to find the csv files test_data.csv, train_data.csv, valid_data.csv', default="./RAVDESS_dataset/csv/divided")
+                    help='directory where to find the csv files test_data.csv, train_data.csv, valid_data.csv', default="./RAVDESS_dataset/csv/divided/")
 
 
 arg = parser.parse_args()
@@ -177,29 +177,33 @@ for e in range(epochs):
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
-        if i % train_gen_len == train_gen_len - 1:
-            scheduler.step()
-            model.eval()
-            acc_train = accuracy(model, train_set_generator, device)
-            acc_valid = accuracy(model, valid_set_generator, device)
-            # accuracy
-            iter_acc = 'iteration %d epoch %d--> %f (%f)' % (
-                i, e + 1, acc_valid, best_accuracy)
-            print(iter_acc)
-            if wandb is not None:
-                wandb.log({"loss": sum_loss/train_gen_len, "training accuracy": acc_train,
-                           "validation accuracy": acc_valid})
-            sum_loss = 0
+    scheduler.step()
+    model.eval()
+    acc_train = accuracy(model, train_set_generator, device)
+    acc_valid = accuracy(model, valid_set_generator, device)
+    # accuracy
+    iter_acc = 'iteration %d epoch %d--> %f (%f)' % (
+        i, e + 1, acc_valid, best_accuracy)
+    print(iter_acc)
+    if wandb is not None:
+        wandb.log({"loss": sum_loss/train_gen_len, "training accuracy": acc_train,
+                    "validation accuracy": acc_valid})
+    sum_loss = 0
 
-            if acc_valid > best_accuracy:
-                improved_accuracy = 'Current accuracy = %f (%f), updating best model' % (
-                    acc_valid, best_accuracy)
-                print(improved_accuracy)
-                best_accuracy = acc_valid
-                best_epoch = e
-                best_model = copy.deepcopy(model)
-                torch.save(
-                    {"args": arg, "model": model.state_dict()}, modelname)
+    if acc_valid > best_accuracy:
+        improved_accuracy = 'Current accuracy = %f (%f), updating best model' % (
+            acc_valid, best_accuracy)
+        print(improved_accuracy)
+        best_accuracy = acc_valid
+        best_epoch = e
+        best_model = copy.deepcopy(model)
+        torch.save(
+            {"args": arg, "model": model.state_dict()}, modelname)
+    # stop if heavy overfitting
+    if acc_train > 99 and acc_valid < 50:
+        print("Training stopped for overfitting! Training acc: %2.2f, Validation acc: %2.2f" % (
+            acc_train, acc_valid))
+        break
 
 model.eval()
 test_acc_best = accuracy(best_model, test_set_generator, device)
