@@ -1,0 +1,7 @@
+DATASET: "RAVDESS"
+csv_location: "./RAVDESS_dataset/csv/divided_with_validation/"
+data_location: "./RAVDESS_dataset/wav_cut_noise/"
+batch_size: 8
+data_suffix: ".wav"
+random_load: false
+sample_rate: 2000

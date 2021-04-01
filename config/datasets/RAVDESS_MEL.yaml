@@ -1,0 +1,7 @@
+DATASET: "RAVDESS"
+csv_location: "./RAVDESS_dataset/csv/divided_with_validation/"
+data_location: "./RAVDESS_dataset/mels_noise2/"
+batch_size: 100
+data_suffix: ".pt"
+random_load: false
+sample_rate: null

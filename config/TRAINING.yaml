@@ -1,0 +1,6 @@
+model_save_path: null
+model_to_load_path: null
+learning_rate: 0.001
+epochs: 100
+step_size: 10
+gamma: 0.9
