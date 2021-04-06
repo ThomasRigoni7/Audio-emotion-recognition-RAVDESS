@@ -11,6 +11,8 @@ from pathlib import Path
 from train import train
 import yaml
 
+from torch.utils.data import WeightedRandomSampler
+
 # togli prossimamente
 from dataset_ravdess import RAVDESS_DATA
 from TCN import TCN
@@ -164,8 +166,12 @@ print('Using device %s' % device)
 train_data = RAVDESS_DATA(dataset_config["csv_location"] + 'train_data.csv',
                           data_dir=files_directory, random_load=dataset_config["random_load"], in_suffix=dataset_config["data_suffix"], sr=dataset_config["sample_rate"])
 params = {'batch_size': dataset_config["batch_size"],
-          'shuffle': True,
           'num_workers': 0}
+
+if dataset_config["sampler"] == True:
+    _ , samples_weight = train_data.get_class_sample_count()
+    sampler = WeightedRandomSampler(samples_weight, len(samples_weight))
+    train_set_generator = data.DataLoader(train_data, sampler=sampler, shuffle=False, **params)
 train_set_generator = data.DataLoader(train_data, **params)
 
 valid_data = RAVDESS_DATA(dataset_config["csv_location"] + 'valid_data.csv',

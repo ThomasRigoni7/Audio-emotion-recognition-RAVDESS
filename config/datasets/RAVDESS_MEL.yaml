@@ -5,3 +5,4 @@ batch_size: 100
 data_suffix: ".pt"
 random_load: false
 sample_rate: null
+sampler: true

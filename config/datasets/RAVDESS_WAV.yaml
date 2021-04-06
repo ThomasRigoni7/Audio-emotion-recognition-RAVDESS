@@ -5,3 +5,4 @@ batch_size: 8
 data_suffix: ".wav"
 random_load: false
 sample_rate: 2000
+sampler: true

@@ -68,6 +68,7 @@ class RAVDESS_DATA(data.Dataset):
         self.in_suffix = in_suffix
         self.transformations = transformations
         self.sr = sr
+        self.classes = ["neutral", "calm", "happy", "sad", "angry", "fearful", "disgust", "surprised"]
         filenames = self._load_csv(csv_path)
         self.files = self._load_files(filenames)
         
@@ -85,6 +86,16 @@ class RAVDESS_DATA(data.Dataset):
                 X_cut = X[:, index:index+self.chunk_len]
             return X_cut, y
         return X, y
+    
+    def get_class_sample_count(self):
+        count =np.zeros(len(self.classes), dtype=int)
+        for s in self.files:
+            count[s[1]] +=1
+        weight = 1. /count
+        sample_weight = []
+        for s in self.files:
+            sample_weight.append(weight[s[1]]) 
+        return count, torch.Tensor(sample_weight)
 
 
 if __name__ == "__main__":
