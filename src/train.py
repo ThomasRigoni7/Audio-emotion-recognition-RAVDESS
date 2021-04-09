@@ -92,10 +92,12 @@ def train(model, criterion, optimizer, scheduler, train_set_generator, valid_set
                 acc_train, acc_valid))
             break
 
-    wacc = weighted_accuracy(model, valid_set_generator, device, valid_set_generator.dataset.classes)
-    print("weighted accuracy: %2.2f%%" % wacc)
+    wacc_last = weighted_accuracy(model, valid_set_generator, device, valid_set_generator.dataset.classes)
+    wacc_best = weighted_accuracy(best_model, valid_set_generator, device, valid_set_generator.dataset.classes)
+    print("weighted accuracy (last): %2.2f%%" % wacc_last)
+    print("weighted accuracy (best): %2.2f%%" % wacc_best)
     if wandb is not None:
-        wandb.log({"best validation accuracy": best_accuracy, "weighted validation accuracy last": wacc})
+        wandb.log({"best validation accuracy": best_accuracy, "weighted validation accuracy last": wacc_last, "weighted validation accuracy best": wacc_best})
         predicted, ground = conf_matrix(model, valid_set_generator, device)
         wandb.log({"confusion_matrix_last": wandb.plot.confusion_matrix(preds=predicted, y_true = ground, class_names=["neutral", "calm", "happy", "sad", "angry", "fearful", "disgust", "surprised"])})
     print("Best accuracy on validation set reached at epoch %d with %2.2f%%" %

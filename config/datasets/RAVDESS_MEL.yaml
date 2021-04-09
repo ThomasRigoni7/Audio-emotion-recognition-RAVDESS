@@ -1,8 +1,28 @@
-DATASET: "RAVDESS"
-csv_location: "./RAVDESS_dataset/csv/divided_with_validation/"
-data_location: "./RAVDESS_dataset/mels_noise2/"
-batch_size: 100
-data_suffix: ".pt"
-random_load: false
-sample_rate: null
-sampler: true
+TAG: "RAVDESS"
+train:
+  DATASET: "RAVDESS"
+  csv_location: "./RAVDESS_dataset/csv/divided_with_validation/train_data.csv"
+  data_location: "./RAVDESS_dataset/mels_noise2/"
+  batch_size: 100
+  data_suffix: ".pt"
+  random_load: false
+  sample_rate: null
+  sampler: true
+valid:
+  DATASET: "RAVDESS"
+  csv_location: "./RAVDESS_dataset/csv/divided_with_validation/valid_data.csv"
+  data_location: "./RAVDESS_dataset/mels_noise2/"
+  batch_size: 100
+  data_suffix: ".pt"
+  random_load: false
+  sample_rate: null
+  sampler: true
+test:
+  DATASET: "RAVDESS"
+  csv_location: "./RAVDESS_dataset/csv/divided_with_validation/test_data.csv"
+  data_location: "./RAVDESS_dataset/mels_noise2/"
+  batch_size: 100
+  data_suffix: ".pt"
+  random_load: false
+  sample_rate: null
+  sampler: true

@@ -1,0 +1,37 @@
+TAG: "MELD"
+train:
+  DATASET: "MELD"
+  csv_location: "./MELD_dataset/csv/train_data.csv"
+  data_location: "./MELD_dataset/wav/train_data/"
+  data_suffix: ".wav"
+  batch_size: 100
+  random_load: true
+  sample_rate: 8000
+  sampler: true
+  transformations: 
+    - "mel"
+    - "power_to_db"
+valid:
+  DATASET: "MELD"
+  csv_location: "./MELD_dataset/csv/valid_data.csv"
+  data_location: "./MELD_dataset/wav/valid_data/"
+  data_suffix: ".wav"
+  batch_size: 100
+  random_load: true
+  sample_rate: 8000
+  sampler: false
+  transformations: 
+    - "mel"
+    - "power_to_db"
+test:
+  DATASET: "MELD"
+  csv_location: "./MELD_dataset/csv/test_data.csv"
+  data_location: "./MELD_dataset/wav/test_data/"
+  data_suffix: ".wav"
+  batch_size: 100
+  random_load: true
+  sample_rate: 8000
+  sampler: false
+  transformations:
+    - "mel"
+    - "power_to_db"

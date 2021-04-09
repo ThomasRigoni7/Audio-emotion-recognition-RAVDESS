@@ -1,5 +1,19 @@
-DATASET: "BAUM2"
-csv_location: "./BAUM2_dataset/csv/random/"
-data location: "./BAUM2_dataset/data/"
-batch_size: 100
-sampler: false
+TAG: "BAUM2"
+train:
+  DATASET: "BAUM2"
+  csv_location: "./BAUM2_dataset/csv/random/"
+  data location: "./BAUM2_dataset/data/"
+  batch_size: 100
+  sampler: false
+valid:
+  DATASET: "BAUM2"
+  csv_location: "./BAUM2_dataset/csv/random/"
+  data location: "./BAUM2_dataset/data/"
+  batch_size: 100
+  sampler: false
+test:
+  DATASET: "BAUM2"
+  csv_location: "./BAUM2_dataset/csv/random/"
+  data location: "./BAUM2_dataset/data/"
+  batch_size: 100
+  sampler: false

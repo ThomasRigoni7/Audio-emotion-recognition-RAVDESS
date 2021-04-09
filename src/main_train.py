@@ -2,7 +2,6 @@ import torch
 from torch.utils import data
 import numpy as np
 import librosa
-from conv_tasnet import ConvTasNet
 import data_loader
 import torch.optim as optim
 import torch.nn
@@ -11,11 +10,6 @@ from pathlib import Path
 from train import train
 import yaml
 
-from torch.utils.data import WeightedRandomSampler
-
-# togli prossimamente
-from dataset_ravdess import RAVDESS_DATA
-from TCN import TCN
 
 # bool parsing function
 
@@ -44,6 +38,8 @@ parser.add_argument('--training_config', default=None, type=str,
 # wandb
 parser.add_argument("--wandb", type=str2bool, nargs='?',
                     help="Log the run with wandb", const=True, default=True)
+parser.add_argument("--tags", type=str, 
+                    help="Tags to add in the wandb run", default=None)
 
 ###
 # All the arguments below  are set to None as default because usually the values on the config files are used. The command-line ones override the config files
@@ -137,15 +133,16 @@ with open(args.model_config) as f:
 with open(args.training_config) as f:
     training_config = yaml.safe_load(f)
 
-override_config_with_args(dataset_config, args)
+# TODO: cosa faccio con gli arg per i dataset?
+#override_config_with_args(dataset_config, args)
 override_config_with_args(model_config, args)
 override_config_with_args(training_config, args)
 
-# quit()
 if args.wandb:
     import wandb
+    tags = [dataset_config["TAG"], model_config["MODEL"], args.tags] if args.tags is not None else [dataset_config["TAG"], model_config["MODEL"]]
     wandb.init(config={"dataset": dataset_config, "model": model_config, "training":training_config}, project="Audio Emotion Recognition", 
-        save_code=True, tags=[dataset_config["DATASET"], model_config["MODEL"]])
+        save_code=True, tags=tags)
     wandb.save("*.py")
     if args.model_save_path is None:
         modelname = (Path("./models/WandB/") /
@@ -157,34 +154,14 @@ else:
         raise RuntimeError(
             "If wandb is not active you MUST specify a model name!")
 
-files_directory = Path(dataset_config["data_location"]) / ""
-
 # Set device as cuda if available, otherwise cpu
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print('Using device %s' % device)
 
-train_data = RAVDESS_DATA(dataset_config["csv_location"] + 'train_data.csv',
-                          data_dir=files_directory, random_load=dataset_config["random_load"], in_suffix=dataset_config["data_suffix"], sr=dataset_config["sample_rate"])
-params = {'batch_size': dataset_config["batch_size"],
-          'num_workers': 0}
+# load the datasets
+train_set_generator, valid_set_generator, test_set_generator = data_loader.load_datasets(dataset_config)
 
-if dataset_config["sampler"] == True:
-    _ , samples_weight = train_data.get_class_sample_count()
-    sampler = WeightedRandomSampler(samples_weight, len(samples_weight))
-    train_set_generator = data.DataLoader(train_data, sampler=sampler, shuffle=False, **params)
-train_set_generator = data.DataLoader(train_data, **params)
-
-valid_data = RAVDESS_DATA(dataset_config["csv_location"] + 'valid_data.csv',
-                          data_dir=files_directory, random_load=dataset_config["random_load"], in_suffix=dataset_config["data_suffix"], sr=dataset_config["sample_rate"])
-params = {'batch_size': dataset_config["batch_size"],
-          'shuffle': False,
-          'num_workers': 0}
-valid_set_generator = data.DataLoader(valid_data, **params)
-
-test_data = RAVDESS_DATA(dataset_config["csv_location"] + 'test_data.csv',
-                         data_dir=files_directory, random_load=dataset_config["random_load"], in_suffix=dataset_config["data_suffix"], sr=dataset_config["sample_rate"])
-test_set_generator = data.DataLoader(test_data, **params)
-
+#load the model
 model = data_loader.load_model(model_config, training_config["model_to_load_path"])
 model.to(device)
 
