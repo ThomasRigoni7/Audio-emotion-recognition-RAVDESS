@@ -23,6 +23,8 @@ class MELD_DATA(data.Dataset):
         for i in files:
             print(i)
         minlen = 2000000
+        maxlen = 0
+        lengths = []
         for i, f in enumerate(data_files):
             print("{}/{}".format(i, len(data_files)), end="\r")
             # extract the emotion and convert it into a number
@@ -37,17 +39,34 @@ class MELD_DATA(data.Dataset):
                 filepath = Path(filepath).with_suffix(self.in_suffix)
             try:
                 x, sr = utils.load_file(filepath, self.sr)
-                x = utils.apply_transformations(x, self.transformations, sr)
-                minlen = min(minlen, x.shape[-1])
-                files.append((x, int(label)))
+                
+                # discard the utterances of less than 1 second and divide the ones longer than 10 secs
+                splits = utils.divide_and_discard(x, sr, 1 * sr, 10 * sr)
+                for split in splits:
+                    split = utils.apply_transformations(split, self.transformations, sr, max_len=5 * sr)
+                    minlen = min(minlen, split.shape[-1])
+                    maxlen = max(maxlen, split.shape[-1])
+                    lengths.append(split.shape[-1])
+                    files.append((split, int(label)))
             except RuntimeError as re:
                 print(re)
         if self.chunk_len is None:
             self.chunk_len = minlen
         print("---DONE---")
+
+        lengths = torch.Tensor(lengths)
+        print("min: ", minlen, "max: ", maxlen)
+        print("mean: ", lengths.mean(), "std dev: ", lengths.std())
+        over_10_sec = lengths > 10 * 44100
+        over_10_sec = torch.count_nonzero(over_10_sec)
+        less_1_sec = lengths < 1 * 44100
+        less_1_sec = torch.count_nonzero(less_1_sec)
+        print("over 10 sec: ", over_10_sec, ",           less 1 sec: ", less_1_sec)
+
+
         return files
     
-    def __init__(self, csv_path, data_dir=None, chunk_len=None, random_load=True, in_suffix=".wav", transformations=[], sr=22050, save_path=None):
+    def __init__(self, csv_path, data_dir=None, chunk_len=None, random_load=True, in_suffix=".wav", transformations=[], sr=None, save_path=None):
         super(MELD_DATA, self).__init__()
         self.chunk_len = chunk_len
         self.random_load = random_load
@@ -89,7 +108,7 @@ class MELD_DATA(data.Dataset):
 
 
 if __name__ == "__main__":
-    mydata = MELD_DATA('./MELD_dataset/MELD.Raw/test_sent_emo.csv', data_dir="./MELD_dataset/test_data/")
+    mydata = MELD_DATA('./MELD_dataset/csv/test_data.csv', data_dir="./MELD_dataset/wav/test_data/", transformations=["cut", "mel", "power_to_db"], chunk_len=int(3 * 44100 / 512))
     
     params = {'batch_size': 5,
               'shuffle': False}

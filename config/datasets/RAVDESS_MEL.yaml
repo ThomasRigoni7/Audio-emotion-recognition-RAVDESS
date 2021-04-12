@@ -8,6 +8,7 @@ train:
   random_load: false
   sample_rate: null
   sampler: true
+  transformations: []
 valid:
   DATASET: "RAVDESS"
   csv_location: "./RAVDESS_dataset/csv/divided_with_validation/valid_data.csv"
@@ -17,6 +18,7 @@ valid:
   random_load: false
   sample_rate: null
   sampler: true
+  transformations: []
 test:
   DATASET: "RAVDESS"
   csv_location: "./RAVDESS_dataset/csv/divided_with_validation/test_data.csv"
@@ -26,3 +28,4 @@ test:
   random_load: false
   sample_rate: null
   sampler: true
+  transformations: []

@@ -54,7 +54,7 @@ def _load_baum2(config):
     raise NotImplementedError("BAUM2 LOADER NOT IMPLEMENTED YET")
 
 def _load_meld(config):
-    return MELD_DATA(config["csv_location"], data_dir=config["data_location"], in_suffix=config["data_suffix"], sr=config["sample_rate"],transformations=config["transformations"])
+    return MELD_DATA(config["csv_location"], data_dir=config["data_location"], in_suffix=config["data_suffix"], sr=config["sample_rate"],transformations=config["transformations"], chunk_len=config["chunk_len"])
     
 
 

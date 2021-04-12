@@ -4,23 +4,28 @@ train:
   csv_location: "./MELD_dataset/csv/train_data.csv"
   data_location: "./MELD_dataset/wav/train_data/"
   data_suffix: ".wav"
-  batch_size: 100
+  batch_size: 30
   random_load: true
-  sample_rate: 8000
+  sample_rate: null
+  chunk_len: 256
   sampler: true
   transformations: 
+    - "cut"
     - "mel"
     - "power_to_db"
+  
 valid:
   DATASET: "MELD"
   csv_location: "./MELD_dataset/csv/valid_data.csv"
   data_location: "./MELD_dataset/wav/valid_data/"
   data_suffix: ".wav"
-  batch_size: 100
+  batch_size: 30
   random_load: true
-  sample_rate: 8000
+  sample_rate: null
+  chunk_len: 256
   sampler: false
   transformations: 
+    - "cut"
     - "mel"
     - "power_to_db"
 test:
@@ -28,10 +33,12 @@ test:
   csv_location: "./MELD_dataset/csv/test_data.csv"
   data_location: "./MELD_dataset/wav/test_data/"
   data_suffix: ".wav"
-  batch_size: 100
+  batch_size: 30
   random_load: true
-  sample_rate: 8000
+  sample_rate: null
+  chunk_len: 256
   sampler: false
   transformations:
+    - "cut"
     - "mel"
     - "power_to_db"

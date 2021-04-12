@@ -1,6 +1,7 @@
 import numpy as np
 import librosa
 import torch
+import math
 from pathlib import Path
 
 def load_file(filepath : Path, sr):
@@ -34,7 +35,8 @@ def apply_transformations(data, transformations, sr, max_len=None):
             if max_len is None:
                 raise ValueError(
                 "Cannot cut the files if max_len is not specified.")
-            fcut = data[:max_len]
+            # fcut = data[:max_len]
+            fcut = data
             if len(fcut) < max_len:
                 padlen = (max_len - fcut.shape[0]) // 2
                 ff = np.pad(
@@ -56,6 +58,20 @@ def apply_transformations(data, transformations, sr, max_len=None):
             data = librosa.power_to_db(data)
         data = torch.from_numpy(data)
     return data
+
+def divide_and_discard(x, sr, minlen, maxlen):
+    # if we have loaded the file with librosa
+    if sr is not None:
+        if len(x) < minlen:
+            # discard the sample
+            return []
+        if len(x) > maxlen:
+            # split the sample into (almost) equal parts
+            num_splits = math.ceil(len(x) / maxlen)
+            return np.array_split(x, num_splits)
+        # return the sample if its len is in between min and max
+        return [x]
+    return [x]
 
 if __name__ == '__main__':
     data, sr = load_file(Path("RAVDESS_dataset/wav/Audio_Song_Actors_01-24/Actor_01/03-02-01-01-01-01-01.wav"), 22050)
