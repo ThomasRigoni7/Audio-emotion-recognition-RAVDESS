@@ -3,6 +3,7 @@ import librosa
 import torch
 import math
 from pathlib import Path
+import specaugment.spec_augment_pytorch as specaugment
 
 def load_file(filepath : Path, sr):
     try:
@@ -18,7 +19,7 @@ def load_file(filepath : Path, sr):
             x, sr = librosa.load(f, sr=sr)
         else:
             raise ValueError(
-            "The suffix '{}' is not valid.".format(self.in_suffix))
+            "The suffix '{}' is not valid.".format(filepath.suffix))
         return (x, sr)
 
 def apply_transformations(data, transformations, sr, max_len=None):
@@ -54,6 +55,9 @@ def apply_transformations(data, transformations, sr, max_len=None):
         if "mfcc" in transformations:
             data = librosa.feature.mfcc(
                 y=data, sr=sr, n_mfcc=40)
+        if "spec_augment" in transformations:
+            data = torch.from_numpy(data)
+            data = specaugment.spec_augment(data)
         if "power_to_db" in transformations:
             data = librosa.power_to_db(data)
         data = torch.from_numpy(data)
@@ -72,6 +76,43 @@ def divide_and_discard(x, sr, minlen, maxlen):
         # return the sample if its len is in between min and max
         return [x]
     return [x]
+
+def unweighted_accuracy(model, generator, device):
+    model.eval()
+    correct = []
+    for data in generator:
+        inputs, label = data
+        outputs = model(inputs.float().to(device))
+        _, pred = torch.max(outputs.detach().cpu(), dim=1)
+        correct.append((pred == label).float())
+    acc = (np.mean(np.hstack(correct)))
+    return 100 * acc
+
+def weighted_accuracy(model, generator, device, classes):
+    model.eval()
+    correct = torch.zeros(len(classes))
+    total = torch.zeros(len(classes))
+    for data in generator:
+        inputs, label = data
+        outputs = model(inputs.float().to(device))
+        _, pred = torch.max(outputs.detach().cpu(), dim=1)
+        for p, l in zip(pred, label):
+            correct[l] += (p == l)
+            total[l] += 1
+    acc = (torch.mean(correct/total))
+    return 100 * acc
+
+def conf_matrix(model, generator, device):
+    model.eval()
+    predicted = []
+    ground = []
+    for data in generator:
+        inputs, label = data
+        outputs = model(inputs.float().to(device))
+        _, pred = torch.max(outputs.detach().cpu(), dim=1)
+        predicted.append(pred)
+        ground.append(label)
+    return np.hstack(predicted), np.hstack(ground)
 
 if __name__ == '__main__':
     data, sr = load_file(Path("RAVDESS_dataset/wav/Audio_Song_Actors_01-24/Actor_01/03-02-01-01-01-01-01.wav"), 22050)

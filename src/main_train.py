@@ -8,6 +8,7 @@ import torch.nn
 import argparse
 from pathlib import Path
 from train import train
+from test import test
 import yaml
 
 
@@ -171,5 +172,7 @@ scheduler = torch.optim.lr_scheduler.StepLR(
 
 criterion = torch.nn.CrossEntropyLoss()
 
-train(model, criterion, optimizer, scheduler, train_set_generator,
+best_model, last_model = train(model, criterion, optimizer, scheduler, train_set_generator,
       valid_set_generator, device, wandb, dataset_config, model_config, training_config)
+
+test(best_model, last_model, device, test_set_generator, wandb)

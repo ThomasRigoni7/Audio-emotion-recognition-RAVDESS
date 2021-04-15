@@ -7,7 +7,7 @@ train:
   batch_size: 30
   random_load: true
   sample_rate: null
-  chunk_len: 256
+  chunk_len: 400
   sampler: true
   transformations: 
     - "cut"
@@ -22,7 +22,7 @@ valid:
   batch_size: 30
   random_load: true
   sample_rate: null
-  chunk_len: 256
+  chunk_len: 400
   sampler: false
   transformations: 
     - "cut"
@@ -36,7 +36,7 @@ test:
   batch_size: 30
   random_load: true
   sample_rate: null
-  chunk_len: 256
+  chunk_len: 400
   sampler: false
   transformations:
     - "cut"
