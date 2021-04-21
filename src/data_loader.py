@@ -9,6 +9,7 @@ from models.conv_tasnet import ConvTasNet
 from dataset_ravdess import RAVDESS_DATA
 from dataset_BAUM2 import BAUM2_DATA
 from dataset_MELD import MELD_DATA
+from dataset_MOSEI20 import MOSEI20_DATA
 
 ######################
 # MODEL
@@ -55,7 +56,9 @@ def _load_baum2(config):
 
 def _load_meld(config):
     return MELD_DATA(config["csv_location"], data_dir=config["data_location"], in_suffix=config["data_suffix"], sr=config["sample_rate"],transformations=config["transformations"], chunk_len=config["chunk_len"])
-    
+
+def _load_mosei20(config):
+    return MOSEI20_DATA(config["data_path"], config["labels_path"])
 
 
 def _switch_dataset(config,  training=False):
@@ -66,6 +69,8 @@ def _switch_dataset(config,  training=False):
         dataset = _load_baum2(config)
     elif config["DATASET"] == "MELD":
         dataset = _load_meld(config)
+    elif config["DATASET"] == "MOSEI20":
+        dataset = _load_mosei20(config)
     return _load_generator(dataset, config["batch_size"], config["sampler"], training)
 
 
