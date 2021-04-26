@@ -5,7 +5,7 @@ import math
 from pathlib import Path
 import specaugment.spec_augment_pytorch as specaugment
 
-def load_file(filepath : Path, sr):
+def load_file(filepath : Path, sr, start_time=0.0, end_time=None):
     try:
         f = open(filepath, 'rb')
     except OSError as oserr:
@@ -16,13 +16,17 @@ def load_file(filepath : Path, sr):
             x = torch.load(f)
             sr = None
         elif filepath.suffix == ".wav":
-            x, sr = librosa.load(f, sr=sr)
+            if end_time is None:
+                duration = None
+            else:
+                duration = end_time - start_time
+            x, sr = librosa.load(f, sr=sr, offset=start_time, duration=duration)
         else:
             raise ValueError(
             "The suffix '{}' is not valid.".format(filepath.suffix))
         return (x, sr)
 
-def apply_transformations(data, transformations, sr, max_len=None):
+def apply_transformations(data, transformations, sr, max_len=None) -> torch.Tensor:
     '''
     This function applies the transformations listed as input to the data, but only if the data is a np array (loaded with librosa from audio), otherwise (torch Tensor) it does nothing.
     
@@ -77,42 +81,32 @@ def divide_and_discard(x, sr, minlen, maxlen):
         return [x]
     return [x]
 
-def unweighted_accuracy(model, generator, device):
+# training/testing metrics
+def get_predictions(model, generator, device):
     model.eval()
-    correct = []
-    for data in generator:
-        inputs, label = data
+    x, y = generator.dataset.__getitem__(0)
+    num_elements = len(generator.dataset)
+    num_classes = len(generator.dataset.classes)
+    num_batches = len(generator)
+    batch_size = generator.batch_size
+    if y.dim() == 0:
+        predictions = torch.zeros(num_elements, num_classes)
+        ground_truths = torch.zeros(num_elements, dtype=torch.long)
+    elif y.dim() == 1:
+        predictions = torch.zeros(num_elements, num_classes)
+        ground_truths = torch.zeros(num_elements, num_classes, dtype=torch.long)
+    else:
+        raise RuntimeError("The dimension of the labels is not 0 or 1: dim={}".format(y.dim()))
+    for i, (inputs, labels) in enumerate(generator):
+        start = i * batch_size
+        end = start + batch_size
+        if i == num_batches - 1:
+            end = num_elements
         outputs = model(inputs.float().to(device))
-        _, pred = torch.max(outputs.detach().cpu(), dim=1)
-        correct.append((pred == label).float())
-    acc = (np.mean(np.hstack(correct)))
-    return 100 * acc
+        predictions[start:end] = outputs.detach().cpu()
+        ground_truths[start:end] = labels.detach().cpu()
+    return predictions, ground_truths
 
-def weighted_accuracy(model, generator, device, classes):
-    model.eval()
-    correct = torch.zeros(len(classes))
-    total = torch.zeros(len(classes))
-    for data in generator:
-        inputs, label = data
-        outputs = model(inputs.float().to(device))
-        _, pred = torch.max(outputs.detach().cpu(), dim=1)
-        for p, l in zip(pred, label):
-            correct[l] += (p == l)
-            total[l] += 1
-    acc = (torch.mean(correct/total))
-    return 100 * acc
-
-def conf_matrix(model, generator, device):
-    model.eval()
-    predicted = []
-    ground = []
-    for data in generator:
-        inputs, label = data
-        outputs = model(inputs.float().to(device))
-        _, pred = torch.max(outputs.detach().cpu(), dim=1)
-        predicted.append(pred)
-        ground.append(label)
-    return np.hstack(predicted), np.hstack(ground)
 
 if __name__ == '__main__':
     data, sr = load_file(Path("RAVDESS_dataset/wav/Audio_Song_Actors_01-24/Actor_01/03-02-01-01-01-01-01.wav"), 22050)

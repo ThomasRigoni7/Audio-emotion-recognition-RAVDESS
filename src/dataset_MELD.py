@@ -43,17 +43,17 @@ class MELD_DATA(data.Dataset):
                 # discard the utterances of less than 1 second and divide the ones longer than 10 secs
                 splits = utils.divide_and_discard(x, sr, 1 * sr, 10 * sr)
                 for split in splits:
-                    split = utils.apply_transformations(split, self.transformations, sr, max_len=5 * sr)
-                    minlen = min(minlen, split.shape[-1])
-                    maxlen = max(maxlen, split.shape[-1])
-                    lengths.append(split.shape[-1])
-                    files.append((split, int(label)))
+                    s = utils.apply_transformations(split, self.transformations, sr, max_len=5 * sr)
+                    minlen = min(minlen, s.shape[-1])
+                    maxlen = max(maxlen, s.shape[-1])
+                    lengths.append(s.shape[-1])
+                    files.append((s, int(label)))
             except RuntimeError as re:
                 print(re)
         if self.chunk_len is None:
             self.chunk_len = minlen
         print("---DONE---")
-
+        '''
         lengths = torch.Tensor(lengths)
         print("min: ", minlen, "max: ", maxlen)
         print("mean: ", lengths.mean(), "std dev: ", lengths.std())
@@ -62,7 +62,7 @@ class MELD_DATA(data.Dataset):
         less_1_sec = lengths < 1 * 44100
         less_1_sec = torch.count_nonzero(less_1_sec)
         print("over 10 sec: ", over_10_sec, ",           less 1 sec: ", less_1_sec)
-
+        '''
 
         return files
     

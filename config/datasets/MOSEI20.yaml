@@ -1,15 +1,15 @@
-tag: "MOSEI20"
+TAG: "MOSEI20"
 train:
   DATASET: "MOSEI20"
   data_path: "CMU-MOSEI_dataset/prova/immortal.multicomp.cs.cmu.edu/raw_datasets/processed_data/cmu-mosei/seq_length_20/data/audio_train.h5"
   labels_path: "CMU-MOSEI_dataset/prova/immortal.multicomp.cs.cmu.edu/raw_datasets/processed_data/cmu-mosei/seq_length_20/data/ey_train.h5"
-  batch_size: 100
+  batch_size: 200
   sampler: false
 valid:
   DATASET: "MOSEI20"
   data_path: "CMU-MOSEI_dataset/prova/immortal.multicomp.cs.cmu.edu/raw_datasets/processed_data/cmu-mosei/seq_length_20/data/audio_valid.h5"
   labels_path: "CMU-MOSEI_dataset/prova/immortal.multicomp.cs.cmu.edu/raw_datasets/processed_data/cmu-mosei/seq_length_20/data/ey_valid.h5"
-  batch_size: 100
+  batch_size: 200
   sampler: false
 test:
   DATASET: "MOSEI20"

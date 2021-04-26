@@ -172,13 +172,20 @@ def main():
     scheduler = torch.optim.lr_scheduler.StepLR(
         optimizer, step_size=training_config["step_size"], gamma=training_config["gamma"])
 
-    # criterion = torch.nn.CrossEntropyLoss()
-    criterion = torch.nn.BCEWithLogitsLoss()
+    if training_config["criterion"] == "cross_entropy":
+        criterion = torch.nn.CrossEntropyLoss()
+    elif training_config["criterion"] == "BCE_logits":
+        criterion = torch.nn.BCEWithLogitsLoss()
+
+    try:
+        multiclass_labels = training_config["multiclass_labels"]
+    except KeyError:
+        multiclass_labels = False
 
     best_model, last_model = train(model, criterion, optimizer, scheduler, train_set_generator,
         valid_set_generator, device, wandb, dataset_config, model_config, training_config)
 
-    test(best_model, last_model, device, test_set_generator, wandb)
+    test(best_model, last_model, device, test_set_generator, wandb, multiclass_labels)
 
 if __name__ == '__main__':
     main()
