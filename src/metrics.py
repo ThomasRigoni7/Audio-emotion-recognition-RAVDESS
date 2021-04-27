@@ -58,7 +58,10 @@ def f1_score(predictions, ground_truths):
 def conf_matrix(predictions, ground_truths, classes):
     import wandb as w_b
     _, pred = torch.max(predictions.detach().cpu(), dim=1)
-    return w_b.plot.confusion_matrix(preds=pred, y_true = ground, class_names=classes)
+    pred_np = pred.numpy()
+    ground_truths_np = ground_truths.numpy()
+
+    return w_b.plot.confusion_matrix(preds=pred_np, y_true = ground_truths_np, class_names=classes)
 
 
 def get_metrics(model, generator, device, metrics: list, criterion=None):

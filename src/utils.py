@@ -90,11 +90,11 @@ def get_predictions(model, generator, device):
     num_batches = len(generator)
     batch_size = generator.batch_size
     if y.dim() == 0:
-        predictions = torch.zeros(num_elements, num_classes)
+        predictions = torch.zeros(num_elements, num_classes, dtype=torch.float)
         ground_truths = torch.zeros(num_elements, dtype=torch.long)
     elif y.dim() == 1:
-        predictions = torch.zeros(num_elements, num_classes)
-        ground_truths = torch.zeros(num_elements, num_classes, dtype=torch.long)
+        predictions = torch.zeros(num_elements, num_classes, dtype=torch.float)
+        ground_truths = torch.zeros(num_elements, num_classes, dtype=torch.float)
     else:
         raise RuntimeError("The dimension of the labels is not 0 or 1: dim={}".format(y.dim()))
     for i, (inputs, labels) in enumerate(generator):

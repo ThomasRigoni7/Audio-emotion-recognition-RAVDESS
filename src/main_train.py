@@ -145,7 +145,7 @@ def main():
         tags = [dataset_config["TAG"], model_config["MODEL"], args.tags] if args.tags is not None else [dataset_config["TAG"], model_config["MODEL"]]
         wandb.init(config={"dataset": dataset_config, "model": model_config, "training":training_config}, project="Audio Emotion Recognition", 
             save_code=True, tags=tags)
-        wandb.save("*.py")
+        wandb.save("src/*.py")
         if args.model_save_path is None:
             modelname = (Path("./models/WandB/") /
                         wandb.run.name).with_suffix(".pt")

@@ -14,39 +14,39 @@ def test(model_best, model_last, device, test_set_generator, wandb, multiclass_l
     print("")
     print("Results on the TEST set:")
 
+    metrics_single_label = ["wacc", "uacc"]
+    if wandb is not None:
+        metrics_single_label.append("conf_matrix")
+
     if not multiclass_labels:
-        metrics_best = get_metrics(model_best, test_set_generator, device, ["wacc", "uacc", "conf_matrix"])
-        metrics_last = get_metrics(model_best, test_set_generator, device, ["wacc", "uacc", "conf_matrix"])
+        metrics_best = get_metrics(model_best, test_set_generator, device, metrics_single_label)
+        metrics_last = get_metrics(model_last, test_set_generator, device, metrics_single_label)
         print("weighted accuracy (best): %2.2f%%" % metrics_best["wacc"])
         print("unweighted accuracy (best): %2.2f%%" % metrics_best["uacc"])
-        print("cofusion matrix (best)")
-        print(metrics_best["conf_matrix"])
         print("")
         print("weighted accuracy (last): %2.2f%%" % metrics_last["wacc"])
         print("unweighted accuracy (last): %2.2f%%" % metrics_last["uacc"])
-        print("cofusion matrix (last)")
-        print(metrics_last["conf_matrix"])
 
         if wandb is not None:
-            wandb.log({"weighted_test_accuracy_best": metrics_best["wacc"],
-                    "weighted_test_accuracy_last": metrics_last["wacc"],
-                    "unweighted_test_accuracy_best": metrics_best["uacc"],
-                    "unweighted_test_accuracy_last": metrics_last["uacc"],
-                    "test_confusion_matrix_best": metrics_best["conf_matrix"],
-                    "test_confusion_matrix_last": metrics_last["conf_matrix"]})
+            wandb.log({"weighted test accuracy best": metrics_best["wacc"],
+                    "weighted test accuracy last": metrics_last["wacc"],
+                    "unweighted test accuracy best": metrics_best["uacc"],
+                    "unweighted test accuracy last": metrics_last["uacc"],
+                    "test confusion matrix best": metrics_best["conf_matrix"],
+                    "test confusion matrix last": metrics_last["conf_matrix"]})
     else:
         metrics_best = get_metrics(model_best, test_set_generator, device, ["acc_multilabel", "f1"])
         metrics_last = get_metrics(model_best, test_set_generator, device, ["acc_multilabel", "f1"])
-        print("multilabel accuracy (best): %2.2f%%" % metrics_best["wacc"])
+        print("multilabel accuracy (best): %2.2f%%" % metrics_best["acc_multilabel"])
         print("f1 score (best): %2.2f" % metrics_best["f1"])
         print("")
-        print("multilabel accuracy (best): %2.2f%%" % metrics_best["wacc"])
+        print("multilabel accuracy (best): %2.2f%%" % metrics_best["acc_multilabel"])
         print("f1 score (best): %2.2f" % metrics_best["f1"])
 
         if wandb is not None:
-            wandb.log({"multilabel_accuracy_best": metrics_best["acc_multilabel"],
-                    "multilabel_accuracy_last": metrics_last["acc_multilabel"],
-                    "f1_score_best": metrics_best["f1"],
-                    "f1_score_last": metrics_last["f1"]})
+            wandb.log({"multilabel accuracy best": metrics_best["acc_multilabel"],
+                    "multilabel accuracy last": metrics_last["acc_multilabel"],
+                    "f1 score best": metrics_best["f1"],
+                    "f1 score last": metrics_last["f1"]})
 
         
