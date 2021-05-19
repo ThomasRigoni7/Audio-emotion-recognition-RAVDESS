@@ -1,0 +1,34 @@
+TAG: "MOSEI"
+train:
+  DATASET: "MOSEI"
+  csv_location: "./CMU-MOSEI_dataset/Audio/Full/csv/train_data.csv"
+  data_location: "./CMU-MOSEI_dataset/Audio/Full/WAV_16000"
+  data_suffix: ".wav"
+  batch_size: 8
+  random_load: true
+  sample_rate: null
+  sampler: false
+  transformations: 
+    - "cut"
+valid:
+  DATASET: "MOSEI"
+  csv_location: "./CMU-MOSEI_dataset/Audio/Full/csv/valid_data.csv"
+  data_location: "./CMU-MOSEI_dataset/Audio/Full/WAV_16000"
+  data_suffix: ".wav"
+  batch_size: 8
+  random_load: true
+  sample_rate: null
+  sampler: false
+  transformations: 
+    - "cut"
+test:
+  DATASET: "MOSEI"
+  csv_location: "./CMU-MOSEI_dataset/Audio/Full/csv/test_data.csv"
+  data_location: "./CMU-MOSEI_dataset/Audio/Full/WAV_16000"
+  data_suffix: ".wav"
+  batch_size: 8
+  random_load: true
+  sample_rate: null
+  sampler: false
+  transformations: 
+    - "cut"

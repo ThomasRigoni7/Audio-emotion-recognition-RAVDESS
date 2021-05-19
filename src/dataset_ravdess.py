@@ -1,12 +1,22 @@
 import torch
 from torch.utils import data
-from scipy import signal
-import librosa
 import numpy as np
 import pandas as pd
 import random
 from pathlib import Path
 import utils
+from tabulate import tabulate
+
+def get_class_count(wav_path):
+    totcount = [0. for i in range(8)]
+    for subdir, dirs, files in os.walk(wav_path):
+        for file in files:
+            label = int(file[6:8])
+            totcount[label - 1] += 1
+
+    print(tabulate([totcount],
+                    headers=[i for i in range(1, 9)]))
+
 
 class RAVDESS_DATA(data.Dataset):
     def _load_csv(self, csv_path):
@@ -29,16 +39,17 @@ class RAVDESS_DATA(data.Dataset):
             else:
                 filepath = Path(filepath).with_suffix(self.in_suffix)
             x, sr = utils.load_file(filepath, self.sr)
-            x = utils.apply_transformations(x, self.transformations, sr)
+            if sr is not None:
+                x = utils.apply_transformations(x, self.transformations, sr, max_len= 5 * sr)
             minlen = min(minlen, x.shape[-1])
-            files.append((x, int(label) - 1))
+            files.append((x, torch.as_tensor(int(label) - 1, dtype=torch.long)))
         print("MinLen: ",minlen)
         if self.chunk_len is None:
             self.chunk_len = minlen
         print("---DONE---")
         return files
     
-    def __init__(self, csv_path, data_dir="./RAVDESS_dataset/mels_noise2/", chunk_len=None, random_load=True, in_suffix=".pt", transformations=[], sr=22050, save_folder=None):
+    def __init__(self, csv_path, data_dir="./RAVDESS_dataset/mels_noise2/", chunk_len=None, random_load=True, in_suffix=".pt", transformations=[], sr=None, save_folder=None):
         super(RAVDESS_DATA, self).__init__()
         self.chunk_len = chunk_len
         self.random_load = random_load
@@ -78,7 +89,8 @@ class RAVDESS_DATA(data.Dataset):
 
 
 if __name__ == "__main__":
-    mydata = RAVDESS_DATA('./RAVDESS_dataset/csv/divided_with_validation/test_data.csv', data_dir='./RAVDESS_dataset/wav_cut_noise/', in_suffix=".wav", transformations=["mfcc", "power_to_db"])
+    '''
+    mydata = RAVDESS_DATA('./RAVDESS_dataset/csv/divided_with_validation/test_data.csv', data_dir='./RAVDESS_dataset/wav/', in_suffix=".wav", transformations=["mel", "power_to_db"], sr = 22050)
     print(mydata)
     print(mydata.__len__())
 
@@ -89,4 +101,19 @@ if __name__ == "__main__":
     for x, y in test_set_generator:
         print(y)
         print(x.shape)
+
+        mel_spec = librosa.feature.inverse.db_to_power(x[0].numpy())
+        wave_obj = librosa.feature.inverse.mel_to_audio(mel_spec)
+        play_obj = sa.play_buffer(wave_obj, 1, 4, 22050)
+        play_obj.wait_done()
         break
+
+    wave_obj, sr = librosa.load("RAVDESS_dataset/wav/Audio_Song_Actors_01-24/Actor_01/03-02-01-01-01-01-01.wav")
+    print("sr:", sr)
+    mel_spec = utils.apply_transformations(wave_obj, ["mel", "power_to_db"], sr)
+    # wave_obj = x[0].numpy()
+    mel_spec = librosa.feature.inverse.db_to_power(mel_spec.numpy())
+    wave_obj = librosa.feature.inverse.mel_to_audio(mel_spec)
+    play_obj = sa.play_buffer(wave_obj, 1, 4, sr)
+    play_obj.wait_done()
+    '''

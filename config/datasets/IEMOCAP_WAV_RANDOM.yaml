@@ -1,0 +1,34 @@
+TAG: "IEMOCAP"
+train:
+  DATASET: "IEMOCAP"
+  csv_location: "./IEMOCAP_dataset/csv/random/train_data.csv"
+  data_location: "./IEMOCAP_dataset/wav/"
+  data_suffix: ".wav"
+  batch_size: 8
+  random_load: true
+  sample_rate: null
+  sampler: true
+  transformations: 
+    - "cut"
+valid:
+  DATASET: "IEMOCAP"
+  csv_location: "./IEMOCAP_dataset/csv/random/valid_data.csv"
+  data_location: "./IEMOCAP_dataset/wav/"
+  data_suffix: ".wav"
+  batch_size: 8
+  random_load: true
+  sample_rate: null
+  sampler: false
+  transformations: 
+    - "cut"
+test:
+  DATASET: "IEMOCAP"
+  csv_location: "./IEMOCAP_dataset/csv/random/test_data.csv"
+  data_location: "./IEMOCAP_dataset/wav/"
+  data_suffix: ".wav"
+  batch_size: 8
+  random_load: true
+  sample_rate: null
+  sampler: false
+  transformations: 
+    - "cut"

@@ -12,6 +12,7 @@ from dataset_MELD import MELD_DATA
 from dataset_MOSEI20 import MOSEI20_DATA
 from dataset_MOSEI_FULL import MOSEI_DATA
 from dataset_CREMAD import CREMAD_DATA
+from dataset_IEMOCAP import IEMOCAP_DATA
 
 ######################
 # MODEL
@@ -70,6 +71,11 @@ def _load_cremad(config):
     return CREMAD_DATA(config["csv_location"],
                         data_dir=Path(config["data_location"]) / "", random_load=config["random_load"], in_suffix=config["data_suffix"], sr=config["sample_rate"], transformations=config["transformations"])
 
+def _load_iemocap(config):
+    return IEMOCAP_DATA(config["csv_location"],
+                        data_dir=Path(config["data_location"]) / "", random_load=config["random_load"], in_suffix=config["data_suffix"], sr=config["sample_rate"], transformations=config["transformations"])
+
+
 def _switch_dataset(config,  training=False):
     dataset = None
     if config["DATASET"] == "RAVDESS":
@@ -84,6 +90,8 @@ def _switch_dataset(config,  training=False):
         dataset = _load_mosei(config)
     elif config["DATASET"] == "CREMAD":
         dataset = _load_cremad(config)
+    elif config["DATASET"] == "IEMOCAP":
+        dataset = _load_iemocap(config)
     return _load_generator(dataset, config["batch_size"], config["sampler"], training)
 
 

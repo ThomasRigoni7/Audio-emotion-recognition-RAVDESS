@@ -11,9 +11,6 @@ train:
   transformations: 
     - "cut"
     - "noise"
-    - "spec_augment"
-    - "mel"
-    - "power_to_db"
 valid:
   DATASET: "RAVDESS"
   csv_location: "./RAVDESS_dataset/csv/divided_with_validation/valid_data.csv"
@@ -26,8 +23,6 @@ valid:
   transformations: 
     - "cut"
     - "noise"
-    - "mel"
-    - "power_to_db"
 test:
   DATASET: "RAVDESS"
   csv_location: "./RAVDESS_dataset/csv/divided_with_validation/test_data.csv"
@@ -40,5 +35,3 @@ test:
   transformations: 
     - "cut"
     - "noise"
-    - "mel"
-    - "power_to_db"

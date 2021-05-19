@@ -1,13 +1,13 @@
 import csv
 import torch
 from torch.utils import data
-import librosa
 import numpy as np
 import pandas as pd
 import random
 from pathlib import Path
 import utils
 import os
+from tabulate import tabulate
 
 
 def generate_csv(wav_path, destination_dir):
@@ -62,6 +62,18 @@ def generate_csv(wav_path, destination_dir):
                             train_writer.writerow([relative_path, label])
                             traincount[label] += 1
 
+def get_class_count(wav_path):
+    emotions2labels = {"NEU": 0, "HAP": 1, "SAD": 2, "ANG": 3, "FEA": 4, "DIS": 5}
+
+    totcount = [0. for i in range(6)]
+    
+    for subdir, dirs, files in os.walk(wav_path):
+        for file in files:
+            label = emotions2labels[file[9:12]]
+            totcount[label] += 1
+    
+    print(tabulate([totcount],
+                headers=[i for i in range(1, 7)]))
 
 class CREMAD_DATA(data.Dataset):
 
@@ -151,3 +163,4 @@ if __name__ == "__main__":
         print(y)
         print(x.shape)
         break
+    

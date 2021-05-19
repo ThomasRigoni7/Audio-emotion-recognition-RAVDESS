@@ -4,6 +4,8 @@ import torch
 import math
 from pathlib import Path
 import specaugment.spec_augment_pytorch as specaugment
+from pysndfx import AudioEffectsChain
+
 
 def load_file(filepath : Path, sr, start_time=0.0, end_time=None):
     try:
@@ -47,6 +49,9 @@ def apply_transformations(data, transformations, sr, max_len=None) -> torch.Tens
                 ff = np.pad(
                     fcut, [(padlen, max_len - fcut.shape[0] - padlen), ], mode='constant')
                 data = ff
+        if "reverb" in transformations:
+            fx = (AudioEffectsChain().reverb())
+            data = fx(data)
         if "noise" in transformations:
             noise = np.random.normal(0, 0.002, data.shape[0])
             data = data + noise
