@@ -1,0 +1,34 @@
+TAG: "RAVDESS"
+train:
+  DATASET: "RAVDESS"
+  csv_location: "./RAVDESS_dataset/csv/full_speaker_independent/train_data.csv"
+  data_location: "./RAVDESS_dataset/wav_trim_8000/"
+  data_suffix: ".wav"
+  batch_size: 32
+  random_load: false
+  sample_rate: null
+  sampler: true
+  transformations: 
+    - "cut"
+valid:
+  DATASET: "RAVDESS"
+  csv_location: "./RAVDESS_dataset/csv/full_speaker_independent/valid_data.csv"
+  data_location: "./RAVDESS_dataset/wav_trim_8000/"
+  data_suffix: ".wav"
+  batch_size: 32
+  random_load: false
+  sample_rate: null
+  sampler: false
+  transformations:
+    - "cut"
+test:
+  DATASET: "RAVDESS"
+  csv_location: "./RAVDESS_dataset/csv/full_speaker_independent/test_data.csv"
+  data_location: "./RAVDESS_dataset/wav_trim_8000/"
+  data_suffix: ".wav"
+  batch_size: 32
+  random_load: false
+  sample_rate: null
+  sampler: false
+  transformations: 
+    - "cut"

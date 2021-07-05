@@ -1,0 +1,43 @@
+TAG: "CREMAD"
+train:
+  DATASET: "CREMAD"
+  csv_location: "./CREMAD_dataset/csv/divided/train_data.csv"
+  data_location: "./CREMAD_dataset/AudioWAV/"
+  data_suffix: ".wav"
+  batch_size: 150
+  random_load: true
+  sample_rate: null
+  sampler: true
+  transformations: 
+    - "cut"
+    - "noise"
+    - "mel"
+    - "power_to_db"
+valid:
+  DATASET: "CREMAD"
+  csv_location: "./CREMAD_dataset/csv/divided/valid_data.csv"
+  data_location: "./CREMAD_dataset/AudioWAV/"
+  data_suffix: ".wav"
+  batch_size: 150
+  random_load: true
+  sample_rate: null
+  sampler: false
+  transformations: 
+    - "cut"
+    - "noise"
+    - "mel"
+    - "power_to_db"
+test:
+  DATASET: "CREMAD"
+  csv_location: "./CREMAD_dataset/csv/divided/test_data.csv"
+  data_location: "./CREMAD_dataset/AudioWAV/"
+  data_suffix: ".wav"
+  batch_size: 150
+  random_load: true
+  sample_rate: null
+  sampler: false
+  transformations: 
+    - "cut"
+    - "noise"
+    - "mel"
+    - "power_to_db"

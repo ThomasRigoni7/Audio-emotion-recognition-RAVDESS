@@ -1,0 +1,31 @@
+TAG: "RAVDESS"
+train:
+  DATASET: "RAVDESS"
+  csv_location: "./RAVDESS_dataset/csv/full_speaker_independent/train_data.csv"
+  data_location: "./RAVDESS_dataset/_mel40/"
+  data_suffix: ".pt"
+  batch_size: 100
+  random_load: false
+  sample_rate: null
+  sampler: true
+  transformations: []
+valid:
+  DATASET: "RAVDESS"
+  csv_location: "./RAVDESS_dataset/csv/full_speaker_independent/valid_data.csv"
+  data_location: "./RAVDESS_dataset/_mel40/"
+  data_suffix: ".pt"
+  batch_size: 100
+  random_load: false
+  sample_rate: null
+  sampler: false
+  transformations: []
+test:
+  DATASET: "RAVDESS"
+  csv_location: "./RAVDESS_dataset/csv/full_speaker_independent/test_data.csv"
+  data_location: "./RAVDESS_dataset/_mel40/"
+  data_suffix: ".pt"
+  batch_size: 100
+  random_load: false
+  sample_rate: null
+  sampler: false
+  transformations: []

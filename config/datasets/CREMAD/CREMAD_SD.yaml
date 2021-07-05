@@ -10,6 +10,7 @@ train:
   sampler: true
   transformations: 
     - "cut"
+    - "noise"
     - "mel"
     - "power_to_db"
 valid:
@@ -23,11 +24,12 @@ valid:
   sampler: false
   transformations: 
     - "cut"
+    - "noise"
     - "mel"
     - "power_to_db"
 test:
   DATASET: "CREMAD"
-  csv_location: "./CREMAD_dataset/csv/random/valid_data.csv"
+  csv_location: "./CREMAD_dataset/csv/random/test_data.csv"
   data_location: "./CREMAD_dataset/AudioWAV/"
   data_suffix: ".wav"
   batch_size: 150
@@ -36,5 +38,6 @@ test:
   sampler: false
   transformations: 
     - "cut"
+    - "noise"
     - "mel"
     - "power_to_db"

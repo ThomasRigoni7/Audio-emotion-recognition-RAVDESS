@@ -1,0 +1,60 @@
+TAG: "RAVDESS_CREMAD"
+train:
+  DATASET: "RAVDESS"
+  csv_location: "./RAVDESS_dataset/csv/cross_dataset/train_data.csv"
+  data_location: "./RAVDESS_dataset/noise_0.001/"
+  data_suffix: ".pt"
+  batch_size: 100
+  random_load: true
+  sample_rate: null
+  sampler: true
+  transformations: []
+  classes_to_use:
+    - 0
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+valid:
+  DATASET: "CREMAD"
+  csv_location: "./CREMAD_dataset/csv/cross_dataset/valid_data.csv"
+  data_location: "./CREMAD_dataset/AudioWAV/"
+  data_suffix: ".wav"
+  batch_size: 150
+  random_load: true
+  sample_rate: null
+  sampler: false
+  transformations: 
+    - "cut"
+    - "noise"
+    - "mel"
+    - "power_to_db"
+  classes_to_use:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+test:
+  DATASET: "CREMAD"
+  csv_location: "./CREMAD_dataset/csv/cross_dataset/test_data.csv"
+  data_location: "./CREMAD_dataset/AudioWAV/"
+  data_suffix: ".wav"
+  batch_size: 150
+  random_load: true
+  sample_rate: null
+  sampler: false
+  transformations: 
+    - "cut"
+    - "noise"
+    - "mel"
+    - "power_to_db"
+  classes_to_use:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5

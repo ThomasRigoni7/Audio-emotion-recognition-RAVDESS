@@ -1,0 +1,58 @@
+TAG: "CREMAD_IEMOCAP"
+train:
+  DATASET: "CREMAD"
+  csv_location: "./CREMAD_dataset/csv/cross_dataset/train_data.csv"
+  data_location: "./CREMAD_dataset/AudioWAV/"
+  data_suffix: ".wav"
+  batch_size: 150
+  random_load: true
+  sample_rate: null
+  sampler: true
+  transformations: 
+    - "cut"
+    - "noise"
+    - "mel"
+    - "power_to_db"
+  classes_to_use:
+    - 0
+    - 1
+    - 2
+    - 3
+valid:
+  DATASET: "IEMOCAP"
+  csv_location: "./IEMOCAP_dataset/csv/cross_dataset/valid_data.csv"
+  data_location: "./IEMOCAP_dataset/wav/"
+  data_suffix: ".wav"
+  batch_size: 100
+  random_load: true
+  sample_rate: null
+  sampler: false
+  transformations: 
+    - "cut"
+    - "noise"
+    - "mel"
+    - "power_to_db"
+  classes_to_use:
+    - 2
+    - 0
+    - 1
+    - 3
+test:
+  DATASET: "IEMOCAP"
+  csv_location: "./IEMOCAP_dataset/csv/cross_dataset/test_data.csv"
+  data_location: "./IEMOCAP_dataset/wav/"
+  data_suffix: ".wav"
+  batch_size: 100
+  random_load: true
+  sample_rate: null
+  sampler: false
+  transformations: 
+    - "cut"
+    - "noise"
+    - "mel"
+    - "power_to_db"
+  classes_to_use:
+    - 2
+    - 0
+    - 1
+    - 3
