@@ -13,7 +13,7 @@ def unweighted_accuracy(predictions, ground_truths):
 def unweighted_accuracy_wrapper(model, generator, device):
     model.eval()
     pred, ground = get_predictions(model, generator, device)
-    return weighted_accuracy(pred, ground, classes)
+    return weighted_accuracy(pred, ground)
 
 
 def weighted_accuracy(predictions, ground_truths, classes=None):
@@ -48,12 +48,12 @@ def accuracy_multilabel(predictions, ground_truths):
 def accuracy_multilabel_wrapper(model, generator, device):
     model.eval()
     pred, ground = get_predictions(model, generator, device)
-    return unweighted_accuracy_multiclass_labels(pred, ground)
+    return accuracy_multilabel(pred, ground)
 
 def f1_score(predictions, ground_truths):
     pred = predictions > 0
     ground = ground_truths > 0
-    return sklearn.metrics.f1_score(ground, pred, average=None)
+    return torch.tensor(sklearn.metrics.f1_score(ground, pred, average="micro") * 100, dtype=torch.float32)
 
 def conf_matrix(predictions, ground_truths, classes):
     import wandb as w_b
@@ -105,8 +105,8 @@ if __name__ == "__main__":
                          [ 1, 1]])
     truth = torch.Tensor([[ 1, 2],
                           [ 0, -2]])
-    acc = unweighted_accuracy_multiclass_labels(pred, truth)
-    f1_score = f1_score(pred, truth)
-    metrics = get_metrics()
-    print("Acc: ", acc)
-    print("F1 : ", f1_score)
+    acc = accuracy_multilabel(pred, truth)
+    f1 = f1_score(pred, truth)
+    #metrics = get_metrics()
+    print("Acc: ", acc, type(acc))
+    print("F1 : ", f1, type(f1))

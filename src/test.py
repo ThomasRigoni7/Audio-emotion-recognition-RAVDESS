@@ -36,12 +36,12 @@ def test(model_best, model_last, device, test_set_generator, wandb, multiclass_l
                     "test confusion matrix last": metrics_last["conf_matrix"]})
     else:
         metrics_best = get_metrics(model_best, test_set_generator, device, ["acc_multilabel", "f1"])
-        metrics_last = get_metrics(model_best, test_set_generator, device, ["acc_multilabel", "f1"])
+        metrics_last = get_metrics(model_last, test_set_generator, device, ["acc_multilabel", "f1"])
         print("multilabel accuracy (best): %2.2f%%" % metrics_best["acc_multilabel"])
         print("f1 score (best): %2.2f" % metrics_best["f1"])
         print("")
-        print("multilabel accuracy (best): %2.2f%%" % metrics_best["acc_multilabel"])
-        print("f1 score (best): %2.2f" % metrics_best["f1"])
+        print("multilabel accuracy (last): %2.2f%%" % metrics_last["acc_multilabel"])
+        print("f1 score (last): %2.2f" % metrics_last["f1"])
 
         if wandb is not None:
             wandb.log({"multilabel accuracy best": metrics_best["acc_multilabel"],

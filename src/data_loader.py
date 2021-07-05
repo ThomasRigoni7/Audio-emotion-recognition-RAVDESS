@@ -51,8 +51,9 @@ def _load_generator(dataset, batch_size, sampler, shuffle):
     return set_generator
 
 def _load_ravdess(config):
-    return RAVDESS_DATA(config["csv_location"],
-                        data_dir=Path(config["data_location"]) / "", random_load=config["random_load"], in_suffix=config["data_suffix"], sr=config["sample_rate"], transformations=config["transformations"])
+    classes_to_use = config["classes_to_use"] if "classes_to_use" in config else [0,1,2,3,4,5,6,7]
+    return RAVDESS_DATA(config["csv_location"], data_dir=Path(config["data_location"]) / "", random_load=config["random_load"], in_suffix=config["data_suffix"], 
+                            sr=config["sample_rate"], transformations=config["transformations"], classes_to_use=classes_to_use)
 
 def _load_baum2(config):
     raise NotImplementedError("BAUM2 LOADER NOT IMPLEMENTED YET")
@@ -68,12 +69,14 @@ def _load_mosei(config):
                         data_dir=Path(config["data_location"]) / "", random_load=config["random_load"], in_suffix=config["data_suffix"], sr=config["sample_rate"], transformations=config["transformations"])
 
 def _load_cremad(config):
-    return CREMAD_DATA(config["csv_location"],
-                        data_dir=Path(config["data_location"]) / "", random_load=config["random_load"], in_suffix=config["data_suffix"], sr=config["sample_rate"], transformations=config["transformations"])
+    classes_to_use = config["classes_to_use"] if "classes_to_use" in config else [0,1,2,3,4,5]
+    return CREMAD_DATA(config["csv_location"],data_dir=Path(config["data_location"]) / "", random_load=config["random_load"], in_suffix=config["data_suffix"], 
+                            sr=config["sample_rate"], transformations=config["transformations"], classes_to_use=classes_to_use)
 
 def _load_iemocap(config):
-    return IEMOCAP_DATA(config["csv_location"],
-                        data_dir=Path(config["data_location"]) / "", random_load=config["random_load"], in_suffix=config["data_suffix"], sr=config["sample_rate"], transformations=config["transformations"])
+    classes_to_use = config["classes_to_use"] if "classes_to_use" in config else [0,1,2,3]
+    return IEMOCAP_DATA(config["csv_location"], data_dir=Path(config["data_location"]) / "", random_load=config["random_load"], in_suffix=config["data_suffix"],
+                            sr=config["sample_rate"], transformations=config["transformations"], classes_to_use=classes_to_use)
 
 
 def _switch_dataset(config,  training=False):

@@ -39,8 +39,8 @@ def get_arguments():
     # wandb
     parser.add_argument("--wandb", type=str2bool, nargs='?',
                         help="Log the run with wandb", const=True, default=True)
-    parser.add_argument("--tags", type=str, 
-                        help="Tags to add in the wandb run", default=None)
+    parser.add_argument('-tags', '--tags', type=str, nargs='*',
+                        help='tags to add in the wandb run', default=[])
 
     ###
     # All the arguments below  are set to None as default because usually the values on the config files are used. The command-line ones override the config files
@@ -142,10 +142,10 @@ def main():
 
     if args.wandb:
         import wandb
-        tags = [dataset_config["TAG"], model_config["MODEL"], args.tags] if args.tags is not None else [dataset_config["TAG"], model_config["MODEL"]]
+        tags = [dataset_config["TAG"], model_config["MODEL"]] + args.tags
         wandb.init(config={"dataset": dataset_config, "model": model_config, "training":training_config}, project="Audio Emotion Recognition", 
             save_code=True, tags=tags)
-        wandb.save("src/*.py")
+        #wandb.save("src/*.py")
         if args.model_save_path is None:
             modelname = (Path("./models/WandB/") /
                         wandb.run.name).with_suffix(".pt")
@@ -162,6 +162,12 @@ def main():
 
     # load the datasets
     train_set_generator, valid_set_generator, test_set_generator = data_loader.load_datasets(dataset_config)
+
+    print("Emotions in datasets:")
+    print("train: ", train_set_generator.dataset.classes)
+    print("valid: ", valid_set_generator.dataset.classes)
+    print("test : ", test_set_generator.dataset.classes)
+    print("")
 
     # load the model
     model = data_loader.load_model(model_config, training_config["model_to_load_path"])
@@ -183,9 +189,10 @@ def main():
         multiclass_labels = False
 
     best_model, last_model = train(model, criterion, optimizer, scheduler, train_set_generator,
-        valid_set_generator, device, wandb, dataset_config, model_config, training_config)
+        valid_set_generator, device, wandb, training_config["epochs"], training_config["model_save_path"], multiclass_labels)
 
     test(best_model, last_model, device, test_set_generator, wandb, multiclass_labels)
+    print("end")
 
 if __name__ == '__main__':
     main()

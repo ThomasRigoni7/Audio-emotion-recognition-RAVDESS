@@ -1,25 +1,17 @@
 import copy
 import torch
-from pathlib import Path
-import numpy as np
 from utils import *
 from metrics import *
-import sklearn
 
 
-def train(model, criterion, optimizer, scheduler, train_set_generator, valid_set_generator, device, wandb, dataset_config, model_config, training_config):
-
-    try:
-        multiclass_labels = training_config["multiclass_labels"]
-    except KeyError:
-        multiclass_labels = False
+def train(model, criterion, optimizer, scheduler, train_set_generator, valid_set_generator, device, wandb, epochs, model_save_path, multiclass_labels):
     
     best_accuracy = 0
     train_gen_len = len(train_set_generator)
     if wandb is not None:
         wandb.watch(model)
 
-    for e in range(training_config["epochs"]):
+    for e in range(epochs):
         for i, d in enumerate(train_set_generator):
             model.train()
             f, l = d
@@ -76,7 +68,7 @@ def train(model, criterion, optimizer, scheduler, train_set_generator, valid_set
             best_epoch = e
             best_model = copy.deepcopy(model)
             torch.save(
-                {"dataset_config": dataset_config, "model_config": model_config, "training_config": training_config, "model": model.state_dict()}, training_config["model_save_path"])
+                {"model": model.state_dict()}, model_save_path)
         
         # stop if heavy overfitting
         if acc_train > 99 and acc_valid < 50:
@@ -85,3 +77,4 @@ def train(model, criterion, optimizer, scheduler, train_set_generator, valid_set
             break
     
     return best_model, model
+

@@ -78,6 +78,16 @@ def generate_csv(files_path, dest_path, speaker_dependent=False, emotions2labels
             if emotion in emotions2labels.keys() and "impro" in filename:
                 label = emotions2labels[emotion]
                 totcount[label] += 1
+                r = random.randint(0,2)
+                if r == 0 or r == 1:
+                    test_writer.writerow([filename, label])
+                    testcount[label] += 1
+                elif r == 2:
+                    valid_writer.writerow([filename, label])
+                    validcount[label] += 1
+                train_writer.writerow([filename, label])
+                traincount[label] += 1
+                '''
                 if speaker_dependent:
                     r = random.randint(0,9)
                     if r == 8 or r == 9:
@@ -104,6 +114,7 @@ def generate_csv(files_path, dest_path, speaker_dependent=False, emotions2labels
                     else:
                         train_writer.writerow([filename, label])
                         traincount[label] += 1
+                '''
     tot_train = sum(traincount)
     tot_test = sum(testcount)
     tot_valid = sum(validcount)
@@ -121,24 +132,26 @@ class IEMOCAP_DATA(data.Dataset):
         files = []
         minlen = 2000000
         for i, (file, label) in enumerate(filenames):
-            print("{}/{}".format(i, len(filenames)), end="\r")
-            filepath = Path(file)
-            if self.data_dir is not None:
-                filepath = (Path(self.data_dir) / filepath).with_suffix(self.in_suffix)
-            else:
-                filepath = Path(filepath).with_suffix(self.in_suffix)
-            x, sr = utils.load_file(filepath, self.sr)
-            if sr is not None:
-                x = utils.apply_transformations(x, self.transformations, sr, max_len= 5 * sr)
-            minlen = min(minlen, x.shape[-1])
-            files.append((x, torch.as_tensor(int(label), dtype=torch.long)))
+            if int(label) in self.classes_to_use:
+                print("{}/{}".format(i, len(filenames)), end="\r")
+                filepath = Path(file)
+                if self.data_dir is not None:
+                    filepath = (Path(self.data_dir) / filepath).with_suffix(self.in_suffix)
+                else:
+                    filepath = Path(filepath).with_suffix(self.in_suffix)
+                x, sr = utils.load_file(filepath, self.sr)
+                if sr is not None:
+                    x = utils.apply_transformations(x, self.transformations, sr, max_len= 5 * sr)
+                minlen = min(minlen, x.shape[-1])
+                files.append((x, torch.as_tensor(self.classes_to_use.index(int(label)), dtype=torch.long)))
         print("MinLen: ",minlen)
         if self.chunk_len is None:
             self.chunk_len = minlen
         print("---DONE---")
         return files
     
-    def __init__(self, csv_path, data_dir="./IEMOCAP_dataset/wav/", chunk_len=None, random_load=True, in_suffix=".wav", transformations=["cut","mel","power_to_db"], sr=None, save_folder=None):
+    def __init__(self, csv_path, data_dir="./IEMOCAP_dataset/wav/", chunk_len=None, random_load=True, in_suffix=".wav",
+                    transformations=["cut","mel","power_to_db"], sr=None, classes_to_use=[0,1,2,3]):
         super(IEMOCAP_DATA, self).__init__()
         self.chunk_len = chunk_len
         self.random_load = random_load
@@ -147,9 +160,13 @@ class IEMOCAP_DATA(data.Dataset):
         self.in_suffix = in_suffix
         self.transformations = transformations
         self.sr = sr
+        self.classes_to_use = classes_to_use
         self.classes = ["hap", "sad", "neu", "ang"]
         filenames = _load_csv(csv_path)
         self.files = self._load_files(filenames)
+        
+        # modify classes for cross-dataset
+        self.classes = [self.classes[c] for c in classes_to_use]
         
 
     def __len__(self):
@@ -180,7 +197,7 @@ class IEMOCAP_DATA(data.Dataset):
 
 if __name__ == '__main__':
     # copy_files("IEMOCAP_dataset/full/","IEMOCAP_dataset/wav")
-    generate_csv("IEMOCAP_dataset/wav", "IEMOCAP_dataset/csv/divided_impro/", speaker_dependent=False)
+    generate_csv("IEMOCAP_dataset/wav", "IEMOCAP_dataset/csv/cross_dataset/", speaker_dependent=True)
     '''
     mydata = IEMOCAP_DATA('./IEMOCAP_dataset/csv/random/test_data.csv', data_dir='./IEMOCAP_dataset/wav/', in_suffix=".wav", transformations=["cut", "mel", "power_to_db"], sr = 22050)
     print(mydata)

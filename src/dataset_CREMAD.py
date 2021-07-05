@@ -19,6 +19,12 @@ def generate_csv(wav_path, destination_dir):
     testcount = [0. for i in range(8)]
     validcount = [0. for i in range(8)]
 
+    perm = np.random.permutation(91)
+    perm += 1001
+    train_actors = perm[:65]
+    valid_actors = perm[65:73]
+    test_actors = perm[73:]
+
     os.makedirs(destination_dir, exist_ok=True)
 
     # split the files in train and test set and save the names in csv files
@@ -37,20 +43,32 @@ def generate_csv(wav_path, destination_dir):
                         relative_path = filepath.relative_to(wav_path)
                         label = emotions2labels[file[9:12]]
                         actor = int(file[0:4])
-                        #original = int(file[21:23]) == 0
-                        #aug1 = int(file[21:23]) == 1
                         totcount[label] += 1
                         '''
-                        if original and (actor == 23 or actor == 24):
+                        # cross dataset
+                        r = random.randint(0, 2)
+                        if r == 0 or r == 1:
+                            test_writer.writerow([relative_path, label])
+                            testcount[label] += 1
+                        elif r == 2:
+                            valid_writer.writerow([relative_path, label])
+                            validcount[label] += 1
+                        train_writer.writerow([relative_path, label])
+                        traincount[label] += 1
+                        '''
+                        
+                        # speaker independent
+                        if actor in test_actors:
                             test_writer.writerow([relative_path, label])
                             testcount[label - 1] += 1
-                        elif original and (actor == 21 or actor == 22):
+                        elif actor in valid_actors:
                             valid_writer.writerow([relative_path, label])
                             validcount[label - 1] += 1
-                        elif actor < 21:
+                        elif actor in train_actors:
                             train_writer.writerow([relative_path, label])
                             traincount[label - 1] += 1
                         '''
+                        # speaker dependent
                         r = random.randint(0, 10)
                         if r == 8 or r == 9:
                             test_writer.writerow([relative_path, label])
@@ -61,6 +79,7 @@ def generate_csv(wav_path, destination_dir):
                         else:
                             train_writer.writerow([relative_path, label])
                             traincount[label] += 1
+                        '''
 
 def get_class_count(wav_path):
     emotions2labels = {"NEU": 0, "HAP": 1, "SAD": 2, "ANG": 3, "FEA": 4, "DIS": 5}
@@ -90,27 +109,29 @@ class CREMAD_DATA(data.Dataset):
         files = []
         minlen = 2000000
         for i, (file, label) in enumerate(filenames):
-            print("{}/{}".format(i, len(filenames)), end="\r")
-            filepath = Path(file)
-            if self.data_dir is not None:
-                filepath = (Path(self.data_dir) /
-                            filepath).with_suffix(self.in_suffix)
-            else:
-                filepath = Path(filepath).with_suffix(self.in_suffix)
-            x, sr = utils.load_file(filepath, self.sr)
-            if sr is not None:
-                x = utils.apply_transformations(
-                    x, self.transformations, sr, max_len=5 * sr)
-            minlen = min(minlen, x.shape[-1])
-            files.append(
-                (x, torch.as_tensor(int(label), dtype=torch.long)))
+            if int(label) in self.classes_to_use:
+                print("{}/{}".format(i, len(filenames)), end="\r")
+                filepath = Path(file)
+                if self.data_dir is not None:
+                    filepath = (Path(self.data_dir) /
+                                filepath).with_suffix(self.in_suffix)
+                else:
+                    filepath = Path(filepath).with_suffix(self.in_suffix)
+                x, sr = utils.load_file(filepath, self.sr)
+                if sr is not None:
+                    x = utils.apply_transformations(
+                        x, self.transformations, sr, max_len=5 * sr)
+                minlen = min(minlen, x.shape[-1])
+                files.append(
+                    (x, torch.as_tensor(self.classes_to_use.index(int(label)), dtype=torch.long)))
         print("MinLen: ", minlen)
         if self.chunk_len is None:
             self.chunk_len = minlen
         print("---DONE---")
         return files
 
-    def __init__(self, csv_path, data_dir="./CREMAD_dataset/AudioWAV/", chunk_len=None, random_load=True, in_suffix=".wav", transformations=["cut", "mel", "power_to_db"], sr=None, save_folder=None):
+    def __init__(self, csv_path, data_dir="./CREMAD_dataset/AudioWAV/", chunk_len=None, random_load=True, in_suffix=".wav",
+                    transformations=["cut", "mel", "power_to_db"], sr=None, classes_to_use=[0,1,2,3,4,5]):
         super(CREMAD_DATA, self).__init__()
         self.chunk_len = chunk_len
         self.random_load = random_load
@@ -119,10 +140,14 @@ class CREMAD_DATA(data.Dataset):
         self.in_suffix = in_suffix
         self.transformations = transformations
         self.sr = sr
+        self.classes_to_use = classes_to_use
         self.classes = ["neutral", "happy", "sad",
                         "angry", "fearful", "disgust"]
         filenames = self._load_csv(csv_path)
         self.files = self._load_files(filenames)
+
+        # modify classes for cross-dataset
+        self.classes = [self.classes[c] for c in classes_to_use]
 
     def __len__(self):
         return len(self.files)
@@ -151,6 +176,7 @@ class CREMAD_DATA(data.Dataset):
 
 if __name__ == "__main__":
     # generate_csv(Path("CREMAD_dataset/AudioWAV/"), Path("CREMAD_dataset/csv/random/"))
+    
     dataset = CREMAD_DATA("CREMAD_dataset/csv/random/valid_data.csv","CREMAD_dataset/AudioWAV")
     print(dataset)
     print(len(dataset))
@@ -163,4 +189,5 @@ if __name__ == "__main__":
         print(y)
         print(x.shape)
         break
-    
+
+    #generate_csv(Path("CREMAD_dataset/AudioWAV/"), Path("CREMAD_dataset/csv/divided/"))

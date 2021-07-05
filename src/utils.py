@@ -5,6 +5,7 @@ import math
 from pathlib import Path
 import specaugment.spec_augment_pytorch as specaugment
 from pysndfx import AudioEffectsChain
+import gc
 
 
 def load_file(filepath : Path, sr, start_time=0.0, end_time=None):
@@ -28,22 +29,44 @@ def load_file(filepath : Path, sr, start_time=0.0, end_time=None):
             "The suffix '{}' is not valid.".format(filepath.suffix))
         return (x, sr)
 
+def shift(data, sampling_rate, shift_max, shift_direction):
+    shift = np.random.randint(sampling_rate * shift_max)
+    if shift_direction == 'right':
+        shift = -shift
+    elif shift_direction == 'both':
+        direction = np.random.randint(0, 2)
+        if direction == 1:
+            shift = -shift
+
+    augmented_data = np.roll(data, shift)
+    # Set to silence for heading/ tailing
+    if shift > 0:
+        augmented_data[:shift] = 0
+    else:
+        augmented_data[shift:] = 0
+    return augmented_data
+
 def apply_transformations(data, transformations, sr, max_len=None) -> torch.Tensor:
     '''
     This function applies the transformations listed as input to the data, but only if the data is a np array (loaded with librosa from audio), otherwise (torch Tensor) it does nothing.
     
-    transformations is a List containing the transformations, possible values: ["cut", "noise", "mel", "mfcc", "power_to_db"]. 
+    transformations is a List containing the transformations, possible values: ["shift", "speed", "cut", "reverb", "noise", "mel", "mfcc", "spec_augment", "power_to_db"]. 
 
     mel and mfcc cannot be specified both. 
     To cut the data it is mandatory to supply a max_len
     '''
     if isinstance(data, np.ndarray):
+        if "shift" in transformations:
+            data = shift(data, sr, 1, "both")
+        if "speed" in transformations:
+            speed_factor = np.random.uniform() * (1.3 - 0.7) + 0.7
+            data =  librosa.effects.time_stretch(data, speed_factor)
         if "cut" in transformations:
             if max_len is None:
                 raise ValueError(
                 "Cannot cut the files if max_len is not specified.")
-            # fcut = data[:max_len]
-            fcut = data
+            fcut = data[:max_len]
+            # fcut = data
             if len(fcut) < max_len:
                 padlen = (max_len - fcut.shape[0]) // 2
                 ff = np.pad(
@@ -53,7 +76,7 @@ def apply_transformations(data, transformations, sr, max_len=None) -> torch.Tens
             fx = (AudioEffectsChain().reverb())
             data = fx(data)
         if "noise" in transformations:
-            noise = np.random.normal(0, 0.002, data.shape[0])
+            noise = np.random.normal(0, 0.001, data.shape[0])
             data = data + noise
         if "mel" in transformations and "mfcc" in transformations:
             raise ValueError(
@@ -67,6 +90,7 @@ def apply_transformations(data, transformations, sr, max_len=None) -> torch.Tens
         if "spec_augment" in transformations:
             data = torch.from_numpy(data)
             data = specaugment.spec_augment(data)
+            data = data.numpy()
         if "power_to_db" in transformations:
             data = librosa.power_to_db(data)
         data = torch.from_numpy(data)
@@ -110,6 +134,10 @@ def get_predictions(model, generator, device):
         outputs = model(inputs.float().to(device))
         predictions[start:end] = outputs.detach().cpu()
         ground_truths[start:end] = labels.detach().cpu()
+        del inputs
+        del labels
+        del outputs
+        gc.collect()
     return predictions, ground_truths
 
 
