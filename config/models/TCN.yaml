@@ -1,0 +1,6 @@
+MODEL: "TCN"
+blocks: 5
+repeats: 2
+dropout_prob: 0.2
+in_classes: 40
+out_classes: 8

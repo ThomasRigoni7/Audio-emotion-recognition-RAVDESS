@@ -1,0 +1,16 @@
+MODEL: "CONV-TASNET"
+# 256
+N: 32
+L: 20
+# 256
+B: 256
+# 512
+H: 32
+P: 3
+X: 5
+R: 2
+C: 8
+norm_type: "glN"
+causal: 0
+mask_nonlinear: "relu"
+dropout_prob: 0.2

@@ -12,7 +12,7 @@ To start using this code, first download one or more datasets, they are availabl
 [CREMA-D](https://github.com/CheyneyComputerScience/CREMA-D)  
 [CMU-MOSEI](http://multicomp.cs.cmu.edu/resources/cmu-mosei-dataset/), the easiest way to download it is with the SDK [here](https://github.com/A2Zadeh/CMU-MultimodalSDK)  
 
-The folder structure used is clearly visible in the config files under `config/`, some of the scripts used to generate these structures and the required csv files that contain the division of recordings in the train, validation and test sets are available in the files under `src/`, on the corresponding dataset file or in `genfiles.py` for RAVDESS.
+The folder structure used is clearly visible in the config files under `config/`, some of the scripts used to generate these structures and the required csv files that contain the division of recordings in the train, validation and test sets are available in the files under `src/`, on the corresponding dataset file or in `genfiles.py` for RAVDESS, some pre-generated config files have been added in the `csv/` folder for ease of use.
 
 Some config files are named using the `_SD` and `_SI` postfixes, these mean Speaker Dependent and Speaker Independent configurations, and are respectively equal to RANDOM and DIVIDED.
 
