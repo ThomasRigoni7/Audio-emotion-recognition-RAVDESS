@@ -27,7 +27,7 @@ When working on the CMU-MOSEI dataset it is necessary to change the training con
 
 The TCN reaches the current State-of-the-art for the RAVDESS dataset with an accuracy of 81.2% in the Speaker Dependent configuration, using both the speech and song files. Below is an image showing the most important changes applied to reach this result.
 
-    ![Bar plot](/images/accuracies.png)
+![Bar plot](/images/accuracies.png)
 
 
 A rather detailed report of the work done and the results achieved with this repository is available on my Bachelor Thesis `thesis.pdf` (written in italian).
