@@ -127,11 +127,22 @@ dmypy.json
 # datasets
 fluent_speech_commands_dataset/
 RAVDESS_dataset/
+BAUM2_dataset/
+MELD_dataset/
+CMU-MOSEI_dataset/
+CREMAD_dataset/
+IEMOCAP_dataset/
+EMO-DB_dataset/
 
 # models and other local stuff
-models/
+/models/
 plots/
 .vscode/
 test.ipynb
 TODO
+FATTE
 wandb/
+test_audio/
+tryout.py
+tryout.bat
+emotions_datasets
